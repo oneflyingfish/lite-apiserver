@@ -212,7 +212,7 @@ file-check-frequency: 20s
 EOF
 ```
 
-* run
+* run kubelet with Standalone-mode
 ```bash
 # run only once at one login-in
 cd ~/litekube/config/kubelet && source ./kubelet
@@ -221,8 +221,7 @@ cd ~/litekube/config/kubelet && source ./kubelet
 sudo kubelet $KUBELET_OPT
 ```
 
-* example: debug with `kubeletctl`
-
+* run one pod (static-pod)
 ```bash
 cat > ~/litekube/manifests <<EOF
 apiVersion: v1
@@ -239,9 +238,21 @@ spec:
    - name: web
      containerPort: 80
 EOF
+```
 
+## How to debug directly
+
+note: if authentication.anonymous.enabled=true in kubelet.yaml, certificate can be ignored.
+
+
+* By `curl`
+```bash
+curl -k $CERT https://127.0.0.1:10250/pods      # -k means uncheck certificate of kubelet itself
+```
+
+* By `kubeletctl`
+
+```bash
 cd ~/litekube/config/kubelet/ssl/
 kubeletctl pods -s 127.0.0.1 $CERT      
-
-# kuebeletctl pods      # if authentication.anonymous.enabled=true in kubelet.yaml, certificate can be ignored
 ```
