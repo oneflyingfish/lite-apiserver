@@ -237,8 +237,10 @@ spec:
    ports:
    - name: web
      containerPort: 80
+     hostPort: 80
 EOF
 ```
+now, you can view `nginx hello` by `curl http://127.0.0.1`
 
 ## How to debug directly
 
