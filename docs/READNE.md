@@ -104,7 +104,7 @@
 
 * Run by configs modified above
     ```bash
-    $ ./lite-apiserver --kubelet-config=./test/kubelet.yaml --config=server.yaml
+    $ ./lite-apiserver --kubelet-config=./test/kubelet.yaml --config=./test/server.yaml
     ```
 
 * Also, you can give args by command flags. View how to run:
