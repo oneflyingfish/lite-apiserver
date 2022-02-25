@@ -1,7 +1,7 @@
 package app
 
 import (
-	"LiteKube/cmd/lite-apiserver/app/options"
+	"LiteKube/pkg/lite-apiserver/options/serverRunOptions"
 	"LiteKube/pkg/version"
 	verflag "LiteKube/pkg/version/varflag"
 	"fmt"
@@ -18,7 +18,7 @@ import (
 var ComponentName = "lite-apiserver"
 
 func NewServerCommand() *cobra.Command {
-	opt := options.NewServerRunOption()
+	opt := serverRunOptions.NewServerRunOption()
 
 	cmd := &cobra.Command{
 		Use:  ComponentName,
@@ -83,7 +83,7 @@ func NewServerCommand() *cobra.Command {
 }
 
 // start to run lite-apiserver
-func Run(serverOptions *options.ServerRunOption, stopCh <-chan struct{}) error {
+func Run(serverOptions *serverRunOptions.ServerRunOption, stopCh <-chan struct{}) error {
 	return nil
 }
 

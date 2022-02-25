@@ -1,4 +1,4 @@
-package options
+package serverRunOptions
 
 import (
 	"LiteKube/pkg/lite-apiserver/options/kubeApiserverOptions"
