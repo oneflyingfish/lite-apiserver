@@ -45,6 +45,9 @@ func (opt *ServerRunOption) LoadConfig() []error {
 		errors = append(errors, err)
 	}
 
+	// print all args
+	opt.PrintArgs()
+
 	var new_errors []error
 	for _, item := range errors {
 		if item != nil {
@@ -53,11 +56,10 @@ func (opt *ServerRunOption) LoadConfig() []error {
 	}
 
 	if len(new_errors) <= 0 {
-		opt.PrintArgs()
-		return nil
-	} else {
 		return new_errors
 	}
+
+	return nil
 }
 
 // Complete set default ServerRunOptions. It should be called after flags parsed.

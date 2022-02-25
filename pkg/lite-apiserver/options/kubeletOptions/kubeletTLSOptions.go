@@ -1,59 +1,63 @@
 package kubeletOptions
 
 import (
+	"LiteKube/pkg/common"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
 )
 
-var (
-	tlsJsonPath string
-)
-
 type KubeletTLSKeyPair struct {
-	//CaPath   string `json:"ca"`
-	CertPath string `json:"cert"`
-	KeyPath  string `json:"key"`
+	//CaPath   string `yaml:"ca"`
+	CertPath string `yaml:"cert"`
+	KeyPath  string `yaml:"key"`
 }
 
 func NewKubeletTLSKeyPair() *KubeletTLSKeyPair {
 	return &KubeletTLSKeyPair{}
 }
 
-func (opt *KubeletTLSKeyPair) LoadFromJson(jsonPath *string) error {
-	if jsonPath == nil {
-		jsonPath = &tlsJsonPath
-	}
+func (opt *KubeletTLSKeyPair) LoadFromConfig(configPath *string) error {
 
-	if len(*jsonPath) <= 0 {
-		err := "loss json config for X.509 Certificate information to kubelet ,you can set by \"--kubelet-client-cert-config=$path\""
+	if configPath == nil || len(*configPath) <= 0 {
+		err := "loss config for X.509 Certificate information to kubelet ,you can set by \"--kubelet-client-cert-config=$path\""
 		klog.Error(err)
 		return fmt.Errorf(err)
 	}
 
-	// load json
-	bytes, err := ioutil.ReadFile(*jsonPath)
+	// load config
+	bytes, err := ioutil.ReadFile(*configPath)
 	if err != nil {
-		klog.Errorf("fail to load %s while load X.509 Certificate information to kubelet", jsonPath)
+		klog.Errorf("fail to load %s while load X.509 Certificate information to kubelet", *configPath)
 		return err
 	}
 
-	// unmarshal json
-	if err := json.Unmarshal(bytes, opt); err != nil {
-		klog.Errorf("fail to unmarshal json while load X.509 Certificate information to kubelet", jsonPath)
+	// unmarshal config
+	if err := yaml.Unmarshal(bytes, opt); err != nil {
+		klog.Errorf("fail to unmarshal config while load X.509 Certificate information to kubelet", *configPath)
+		return err
+	}
+
+	// to absolute path
+	if err := common.AbsPath(&opt.CertPath); err != nil {
+		klog.Errorf("fail to translate %s to absolute path", opt.CertPath)
+		return err
+	}
+
+	if err := common.AbsPath(&opt.KeyPath); err != nil {
+		klog.Errorf("fail to translate %s to absolute path", opt.KeyPath)
 		return err
 	}
 
 	if err := opt.validate(); err != nil {
-		klog.Errorf("fail to load X.509 Certificate information to kubelet from json")
+		klog.Errorf("fail to load X.509 Certificate information to kubelet from config file")
 		return err
 	}
-	klog.Info("success to load X.509 Certificate information to kubelet from json")
+	klog.Info("success to load X.509 Certificate information to kubelet from config file")
 
 	return nil
 }
@@ -92,10 +96,6 @@ func (opt *KubeletTLSKeyPair) validate() error {
 	}
 
 	return nil
-}
-
-func (opt *KubeletTLSKeyPair) AddFlagsTo(fs *pflag.FlagSet) {
-	fs.StringVar(&tlsJsonPath, "kubelet-client-cert-config", "", "path to config store the X.509 Certificate information to kubelet")
 }
 
 func FileExist(path string) error {

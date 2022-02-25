@@ -2,24 +2,31 @@ package serverOptions
 
 import (
 	"LiteKube/pkg/common"
-	"encoding/json"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/spf13/pflag"
+	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
 )
 
 var (
 	serverConfigPath string
 	defaultValue     ServerOption = ServerOption{
-		Hostname: "127.0.0.1",
-		Port:     6500,
+		CATLSKeyPair:    nil,
+		Hostname:        "127.0.0.1",
+		Port:            6500,
+		InsecurePort:    0,
+		CATLSConfigPath: "",
 	}
 )
 
 type ServerOption struct {
-	Hostname string `json:"hostname"`
-	Port     int    `json:"port"`
+	CATLSKeyPair    *ServerTLSKeyPair
+	Hostname        string `yaml:"hostname"`
+	Port            int    `yaml:"port"`
+	InsecurePort    int    `yaml:"insecure-port"`
+	CATLSConfigPath string `yaml:"ca-tls-configpath"`
 }
 
 func NewServerOptions() *ServerOption {
@@ -27,51 +34,76 @@ func NewServerOptions() *ServerOption {
 }
 
 func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
-	fs.StringVar(&serverConfigPath, "config", "", "json-config for lite-apiserver (lower priority to flags)")
-	fs.StringVar(&opt.Hostname, "hostname", defaultValue.Hostname, "hostname of kubelet")
-	fs.IntVar(&opt.Port, "port", defaultValue.Port, "port of kubelet")
+	fs.StringVar(&serverConfigPath, "config", "", "config for lite-apiserver (lower priority to flags)")
+	fs.StringVar(&opt.Hostname, "hostname", "", fmt.Sprintf("hostname of lite-apiserver (default: %s)", defaultValue.Hostname))
+	fs.IntVar(&opt.Port, "port", 0, fmt.Sprintf("https port of lite-apiserver (default: %d)", defaultValue.Port))
+	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set 0 to disable (default: %d)", defaultValue.InsecurePort))
+	fs.StringVar(&opt.CATLSConfigPath, "ca-tls-configpath", "", fmt.Sprintf("path to config store the X.509 Certificate information for lite-apiserver (default: \"%s\")", defaultValue.CATLSConfigPath))
 }
 
 func (opt *ServerOption) LoadServerConfig() error {
-	if len(serverConfigPath) <= 0 {
-		return nil
+	opt_file := &ServerOption{
+		CATLSKeyPair: nil,
 	}
 
-	opt_file := &ServerOption{}
+	if len(serverConfigPath) > 0 {
+		// load config
+		bytes, err := ioutil.ReadFile(serverConfigPath)
+		if err != nil {
+			klog.Warningf("fail to read %s for config, process skip directly", serverConfigPath)
+			goto SKIP
+		}
 
-	// load json
-	bytes, err := ioutil.ReadFile(serverConfigPath)
-	if err != nil {
-		klog.Warningf("fail to read %s for kubelet-config, process skip directly", serverConfigPath)
-		return nil
+		// unmarshal config
+		if err := yaml.Unmarshal(bytes, opt_file); err != nil {
+			klog.Warningf("fail to unmarshal %s for config, process skip directly", serverConfigPath)
+			goto SKIP
+		}
 	}
 
-	// unmarshal json
-	if err := json.Unmarshal(bytes, opt_file); err != nil {
-		klog.Warningf("fail to unmarshal %s for kubelet-config, process skip directly", serverConfigPath)
-		return nil
-	}
+SKIP:
 
 	opt.MergeConfig(opt_file)
 
+	// load whole X509 config
+	if err := opt.LoadX509(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (opt *ServerOption) MergeConfig(opt_file *ServerOption) {
-	// hostname
-	if (common.IsZero(opt.Hostname) || opt.Hostname == defaultValue.Hostname) && !common.IsZero(opt_file.Hostname) {
-		opt.Hostname = opt_file.Hostname
+func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
+	// serverConfigPath to absolute path
+	if err := common.AbsPath(&serverConfigPath); err != nil {
+		klog.Errorf("fail to translate %s to absolute path", serverConfigPath)
+		return err
 	}
 
-	// port
-	if (common.IsZero(opt.Port) || opt.Port == defaultValue.Port) && !common.IsZero(opt_file.Port) {
-		opt.Port = opt_file.Port
+	// merge config-file to flags
+	common.Merge(opt, opt_file, &defaultValue, "Hostname")
+	common.Merge(opt, opt_file, &defaultValue, "Port")
+	common.Merge(opt, opt_file, &defaultValue, "InsecurePort")
+	common.Merge(opt, opt_file, &defaultValue, "CATLSConfigPath")
+
+	// CATLSConfigPath to absolute path
+	if err := common.AbsPath(&opt.CATLSConfigPath); err != nil {
+		klog.Errorf("fail to translate %s to absolute path", opt.CATLSConfigPath)
+		return err
 	}
+
+	return nil
 }
 
 func (opt *ServerOption) PrintArgs() error {
-	klog.Infof("--config=%s", serverConfigPath)
-	klog.Infof("--hostname=%s", opt.Hostname)
-	klog.Infof("--port=%d", opt.Port)
+	klog.Infof("--config= %s ", serverConfigPath)
+	klog.Infof("--hostname= %s ", opt.Hostname)
+	klog.Infof("--port= %d ", opt.Port)
+	klog.Infof("--insecure-port= %d ", opt.InsecurePort)
+	klog.Infof("--ca-tls-configpath= %s", opt.CATLSConfigPath)
 	return nil
+}
+
+func (opt *ServerOption) LoadX509() error {
+	return opt.CATLSKeyPair.LoadFromConfig(&opt.CATLSConfigPath)
 }

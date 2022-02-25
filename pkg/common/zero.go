@@ -7,6 +7,22 @@ func IsZero(x interface{}) bool {
 		return true
 	}
 	value := reflect.ValueOf(x)
+	return IsValueZero(&value)
+}
+
+// s is one struct ptr
+func IsZeroByFieldName(s interface{}, fieldName string) bool {
+	if s == nil {
+		return true
+	}
+
+	value_struct := reflect.ValueOf(s).Elem() // .Elem is useful if h_opt is a ptr
+	value := value_struct.FieldByName(fieldName)
+	return IsValueZero(&value)
+}
+
+func IsValueZero(v *reflect.Value) bool {
+	value := *v
 	switch value.Kind() {
 	case reflect.String:
 		return value.Len() == 0
