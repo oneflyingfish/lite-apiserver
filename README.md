@@ -258,3 +258,6 @@ curl -k $CERT https://127.0.0.1:10250/pods      # -k means uncheck certificate o
 cd ~/litekube/config/kubelet/ssl/
 kubeletctl pods -s 127.0.0.1 $CERT      
 ```
+
+## How to use LiteKube
+[run lite-apiserver](docs/READNE.md)
