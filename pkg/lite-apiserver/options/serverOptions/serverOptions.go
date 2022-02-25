@@ -15,7 +15,7 @@ var (
 	defaultValue     ServerOption = ServerOption{
 		CATLSKeyPair:    nil,
 		Hostname:        "127.0.0.1",
-		Port:            6500,
+		Port:            13500,
 		InsecurePort:    0,
 		CATLSConfigPath: "",
 	}
