@@ -22,7 +22,7 @@ func NewServerCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:  ComponentName,
-		Long: `The lite-apiserver is one simplified version of kube-apiserver, which is only service for one node and deal with pods`,
+		Long: `The lite-apiserver is one simplified version of kube-apiserver, which is only service for one node and deal with pods.`,
 
 		// stop printing usage when the command errors
 		SilenceUsage: true,
@@ -49,7 +49,8 @@ func NewServerCommand() *cobra.Command {
 		Args: func(cmd *cobra.Command, args []string) error { // Validate unresolved args
 			for _, arg := range args {
 				if len(arg) > 0 {
-					return fmt.Errorf("%q does not take any arguments, got %q", cmd.CommandPath(), args)
+					klog.Errorf("%q does not support subcommands at this time but get %q", cmd.CommandPath(), args)
+					return fmt.Errorf("%q does not support subcommands at this time but get %q", cmd.CommandPath(), args)
 				}
 			}
 			return nil
