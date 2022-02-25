@@ -146,14 +146,14 @@
 
     # for example:
     $ ./lite-apiserver \
-     --hostname=127.0.0.1 \
-     --port=20500 \
-     --insecure-port=20501 \
-     --ca-tls-configpath=/home/aflyingfish/LiteKube/cmd/lite-apiserver/test/server-ca-cert.yaml \
-     --kubelet-hostname=localhost \
-     --kubelet-healthzport=10248 \
-     --kubelet-port=10250 \
-     --kubelet-client-cert-config=/home/aflyingfish/LiteKube/cmd/lite-apiserver/test/kubelet-cert.yaml
+            --hostname=127.0.0.1 \
+            --port=20500 \
+            --insecure-port=20501 \
+            --ca-tls-configpath=/home/aflyingfish/LiteKube/cmd/lite-apiserver/test/server-ca-cert.yaml \
+            --kubelet-hostname=localhost \
+            --kubelet-healthzport=10248 \
+            --kubelet-port=10250 \
+            --kubelet-client-cert-config=/home/aflyingfish/LiteKube/cmd/lite-apiserver/test/kubelet-cert.yaml
     ```
 
 * Surely, you can use this two way tother, and flags will be in a higher priority.
