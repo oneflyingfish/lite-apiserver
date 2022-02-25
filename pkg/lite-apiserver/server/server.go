@@ -1,5 +1,5 @@
 package server
 
-type LiteServer struct {
+type LiteApiServer struct {
 	stopCh <-chan struct{}
 }

@@ -5,6 +5,8 @@ import (
 	"LiteKube/pkg/lite-apiserver/options/kubeletOptions"
 	"LiteKube/pkg/lite-apiserver/options/serverOptions"
 
+	verflag "LiteKube/pkg/version/varflag"
+
 	cliflag "k8s.io/component-base/cli/flag"
 )
 
@@ -26,6 +28,7 @@ func (opt *ServerRunOption) GetNamedFlagsSet() (fsSet cliflag.NamedFlagSets) {
 	opt.serverOption.AddFlagsTo(fsSet.FlagSet("lite-apiserver"))
 	opt.apiserverOptions.AddFlagsTo(fsSet.FlagSet("kube-apiserver"))
 	opt.kubeletOption.AddFlagsTo(fsSet.FlagSet("kubelet"))
+	verflag.AddFlagsTo(fsSet.FlagSet("others"))
 	return
 }
 

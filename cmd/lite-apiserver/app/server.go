@@ -29,7 +29,8 @@ func NewServerCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested() // --version=false/true/raw to print version
 
-			klog.Infof("Versions: %+v\n", version.Get())
+			klog.Info("Welcome to LiteKube, a Pod deployment and monitoring system for edge weak configuration scenarios, which stay the same call-api with K8S.")
+			klog.Infof("Versions: %+v\n", version.GetSimple())
 
 			// load config from disk-file and merge with flags
 			if errs := opt.LoadConfig(); len(errs) != 0 {

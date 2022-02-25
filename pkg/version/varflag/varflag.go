@@ -29,12 +29,14 @@ import (
 type versionValue int
 
 const (
-	VersionFalse versionValue = 0
-	VersionTrue  versionValue = 1
-	VersionRaw   versionValue = 2
+	VersionFalse  versionValue = 0
+	VersionTrue   versionValue = 1
+	VersionRaw    versionValue = 2
+	VersionSimple versionValue = 3
 )
 
 const strRawVersion string = "raw"
+const strSimpleVersion string = "simple"
 
 func (v *versionValue) IsBoolFlag() bool {
 	return true
@@ -48,7 +50,11 @@ func (v *versionValue) Set(s string) error {
 	if s == strRawVersion {
 		*v = VersionRaw
 		return nil
+	} else if s == strSimpleVersion {
+		*v = VersionSimple
+		return nil
 	}
+
 	boolVal, err := strconv.ParseBool(s)
 	if boolVal {
 		*v = VersionTrue
@@ -61,6 +67,8 @@ func (v *versionValue) Set(s string) error {
 func (v *versionValue) String() string {
 	if *v == VersionRaw {
 		return strRawVersion
+	} else if *v == VersionSimple {
+		return strSimpleVersion
 	}
 	return fmt.Sprintf("%v", bool(*v == VersionTrue))
 }
@@ -75,7 +83,8 @@ func VersionVar(p *versionValue, name string, value versionValue, usage string) 
 	flag.Var(p, name, usage)
 
 	// "--version" will be treated as "--version=true"
-	flag.Lookup(name).NoOptDefVal = "true"
+	// "--version" will be treated as "--version=simple"
+	flag.Lookup(name).NoOptDefVal = strSimpleVersion
 }
 
 func Version(name string, value versionValue, usage string) *versionValue {
@@ -87,7 +96,7 @@ func Version(name string, value versionValue, usage string) *versionValue {
 const versionFlagName = "version"
 
 var (
-	versionFlag = Version(versionFlagName, VersionFalse, "Print version information and quit")
+	versionFlag = Version(versionFlagName, VersionFalse, "Print version information and quit, true/false/raw/simple (default: simple)")
 )
 
 // AddFlags registers this package's flags on arbitrary FlagSets, such that they point to the same value as the global flags.
@@ -102,6 +111,9 @@ func PrintAndExitIfRequested() {
 		os.Exit(0)
 	} else if *versionFlag == VersionTrue {
 		fmt.Printf("LiteKube %+v\n", version.Get())
+		os.Exit(0)
+	} else if *versionFlag == VersionSimple {
+		fmt.Printf("%s\n", version.GetSimple())
 		os.Exit(0)
 	}
 }

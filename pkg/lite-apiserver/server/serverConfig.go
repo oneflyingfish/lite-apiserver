@@ -1,7 +1,7 @@
 package server
 
-import "LiteKube/cmd/lite-apiserver/app/options"
+import "LiteKube/pkg/lite-apiserver/options/serverRunOptions"
 
-type ServerConfig struct {
-	serverRunOption *options.ServerRunOption
+type LiteApiServerConfig struct {
+	*serverRunOptions.ServerRunOption
 }
