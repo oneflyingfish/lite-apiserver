@@ -101,10 +101,10 @@ func (opt *KubeletOption) LoadX509() error {
 }
 
 func (opt *KubeletOption) PrintArgs() error {
-	klog.Infof("--kubelet-config= %s", kubeletConfigPath)
-	klog.Infof("--kubelet-hostname= %s", opt.Hostname)
-	klog.Infof("--kubelet-healthzport= %d", opt.HealthzPort)
-	klog.Infof("--kubelet-port= %d", opt.Port)
-	klog.Infof("--kubelet-client-cert-config= %s", opt.TLSConfigPath)
+	klog.Infof("--kubelet-config=%s", kubeletConfigPath)
+	klog.Infof("--kubelet-hostname=%s", opt.Hostname)
+	klog.Infof("--kubelet-healthzport=%d", opt.HealthzPort)
+	klog.Infof("--kubelet-port=%d", opt.Port)
+	klog.Infof("--kubelet-client-cert-config=%s", opt.TLSConfigPath)
 	return nil
 }

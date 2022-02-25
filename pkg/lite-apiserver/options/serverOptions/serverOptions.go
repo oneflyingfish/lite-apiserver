@@ -30,7 +30,9 @@ type ServerOption struct {
 }
 
 func NewServerOptions() *ServerOption {
-	return &ServerOption{}
+	return &ServerOption{
+		CATLSKeyPair: NewServerTLSKeyPair(),
+	}
 }
 
 func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
@@ -96,11 +98,11 @@ func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
 }
 
 func (opt *ServerOption) PrintArgs() error {
-	klog.Infof("--config= %s ", serverConfigPath)
-	klog.Infof("--hostname= %s ", opt.Hostname)
-	klog.Infof("--port= %d ", opt.Port)
-	klog.Infof("--insecure-port= %d ", opt.InsecurePort)
-	klog.Infof("--ca-tls-configpath= %s", opt.CATLSConfigPath)
+	klog.Infof("--config=%s ", serverConfigPath)
+	klog.Infof("--hostname=%s ", opt.Hostname)
+	klog.Infof("--port=%d ", opt.Port)
+	klog.Infof("--insecure-port=%d ", opt.InsecurePort)
+	klog.Infof("--ca-tls-configpath=%s", opt.CATLSConfigPath)
 	return nil
 }
 

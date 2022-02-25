@@ -26,7 +26,6 @@ func Merge(flag_opt interface{}, config_opt interface{}, default_opt interface{}
 			// flag => default value
 			default_value := reflect.ValueOf(default_opt).Elem()
 			v.Set(default_value.FieldByName(fieldName))
-			fmt.Println("run")
 		}
 	}
 }
