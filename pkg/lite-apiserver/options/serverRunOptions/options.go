@@ -11,23 +11,23 @@ import (
 )
 
 type ServerRunOption struct {
-	apiserverOptions *kubeApiserverOptions.KubeApiserverOption
-	kubeletOption    *kubeletOptions.KubeletOption
-	serverOption     *serverOptions.ServerOption
+	ApiserverOptions *kubeApiserverOptions.KubeApiserverOption
+	KubeletOption    *kubeletOptions.KubeletOption
+	ServerOption     *serverOptions.ServerOption
 }
 
 func NewServerRunOption() *ServerRunOption {
 	return &ServerRunOption{
-		apiserverOptions: kubeApiserverOptions.NewKubeApiserverOption(),
-		kubeletOption:    kubeletOptions.NewKubeletOption(),
-		serverOption:     serverOptions.NewServerOptions(),
+		ApiserverOptions: kubeApiserverOptions.NewKubeApiserverOption(),
+		KubeletOption:    kubeletOptions.NewKubeletOption(),
+		ServerOption:     serverOptions.NewServerOptions(),
 	}
 }
 
 func (opt *ServerRunOption) GetNamedFlagsSet() (fsSet cliflag.NamedFlagSets) {
-	opt.serverOption.AddFlagsTo(fsSet.FlagSet("lite-apiserver"))
-	opt.apiserverOptions.AddFlagsTo(fsSet.FlagSet("kube-apiserver"))
-	opt.kubeletOption.AddFlagsTo(fsSet.FlagSet("kubelet"))
+	opt.ServerOption.AddFlagsTo(fsSet.FlagSet("lite-apiserver"))
+	opt.ApiserverOptions.AddFlagsTo(fsSet.FlagSet("kube-apiserver"))
+	opt.KubeletOption.AddFlagsTo(fsSet.FlagSet("kubelet"))
 	verflag.AddFlagsTo(fsSet.FlagSet("others"))
 	return
 }
@@ -36,15 +36,15 @@ func (opt *ServerRunOption) GetNamedFlagsSet() (fsSet cliflag.NamedFlagSets) {
 func (opt *ServerRunOption) LoadConfig() []error {
 	var errors []error
 
-	if err := opt.serverOption.LoadServerConfig(); err != nil {
+	if err := opt.ServerOption.LoadServerConfig(); err != nil {
 		errors = append(errors, err)
 	}
 
-	if err := opt.kubeletOption.LoadKubeletConfig(); err != nil {
+	if err := opt.KubeletOption.LoadKubeletConfig(); err != nil {
 		errors = append(errors, err)
 	}
 
-	if err := opt.apiserverOptions.LoadKubeApiserverConfig(); err != nil {
+	if err := opt.ApiserverOptions.LoadKubeApiserverConfig(); err != nil {
 		errors = append(errors, err)
 	}
 
@@ -73,15 +73,15 @@ func (opt *ServerRunOption) Complete() error {
 func (opt *ServerRunOption) PrintArgs() error {
 	var err_ error
 
-	if err := opt.serverOption.PrintArgs(); err != nil {
+	if err := opt.ServerOption.PrintArgs(); err != nil {
 		err_ = err
 	}
 
-	if err := opt.kubeletOption.PrintArgs(); err != nil {
+	if err := opt.KubeletOption.PrintArgs(); err != nil {
 		err_ = err
 	}
 
-	if err := opt.apiserverOptions.PrintArgs(); err != nil {
+	if err := opt.ApiserverOptions.PrintArgs(); err != nil {
 		err_ = err
 	}
 

@@ -2,6 +2,7 @@ package app
 
 import (
 	"LiteKube/pkg/lite-apiserver/options/serverRunOptions"
+	"LiteKube/pkg/lite-apiserver/server"
 	"LiteKube/pkg/version"
 	verflag "LiteKube/pkg/version/varflag"
 	"fmt"
@@ -85,6 +86,23 @@ func NewServerCommand() *cobra.Command {
 
 // start to run lite-apiserver
 func Run(serverOptions *serverRunOptions.ServerRunOption, stopCh <-chan struct{}) error {
+	server, err := server.CreateLiteServer(serverOptions)
+	defer server.Stop() // close all go routines
+
+	if err != nil {
+		klog.Errorf("Failed to create lite-apiserver: %v", err)
+		return err
+	}
+
+	if err = server.Run(); err != nil {
+		klog.Info("Failed to start lite-apiserver: %v", err)
+		return err
+	}
+
+	<-stopCh // wait util read system close signal
+
+	klog.Info("We have prepare to close process, it won't take you too much time, wait please!")
+
 	return nil
 }
 

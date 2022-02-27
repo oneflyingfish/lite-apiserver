@@ -18,6 +18,7 @@ var (
 		Port:            13500,
 		InsecurePort:    0,
 		CATLSConfigPath: "",
+		SyncDuration:    10,
 	}
 )
 
@@ -27,6 +28,7 @@ type ServerOption struct {
 	Port            int    `yaml:"port"`
 	InsecurePort    int    `yaml:"insecure-port"`
 	CATLSConfigPath string `yaml:"ca-tls-configpath"`
+	SyncDuration    int    `yaml:"syncduration"`
 }
 
 func NewServerOptions() *ServerOption {
@@ -41,6 +43,7 @@ func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
 	fs.IntVar(&opt.Port, "port", 0, fmt.Sprintf("https port of lite-apiserver (default: %d)", defaultValue.Port))
 	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set 0 to disable (default: %d)", defaultValue.InsecurePort))
 	fs.StringVar(&opt.CATLSConfigPath, "ca-tls-configpath", "", fmt.Sprintf("path to config store the X.509 Certificate information for lite-apiserver (default: \"%s\")", defaultValue.CATLSConfigPath))
+	fs.IntVar(&opt.SyncDuration, "--syncduration", 0, fmt.Sprintf("max time for one-request last (default: %d)", defaultValue.SyncDuration))
 }
 
 func (opt *ServerOption) LoadServerConfig() error {
@@ -87,6 +90,7 @@ func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
 	common.Merge(opt, opt_file, &defaultValue, "Port")
 	common.Merge(opt, opt_file, &defaultValue, "InsecurePort")
 	common.Merge(opt, opt_file, &defaultValue, "CATLSConfigPath")
+	common.Merge(opt, opt_file, &defaultValue, "SyncDuration")
 
 	// CATLSConfigPath to absolute path
 	if err := common.AbsPath(&opt.CATLSConfigPath); err != nil {
@@ -103,6 +107,7 @@ func (opt *ServerOption) PrintArgs() error {
 	klog.Infof("--port=%d ", opt.Port)
 	klog.Infof("--insecure-port=%d ", opt.InsecurePort)
 	klog.Infof("--ca-tls-configpath=%s", opt.CATLSConfigPath)
+	klog.Infof("--syncduration=%d", opt.SyncDuration)
 	return nil
 }
 

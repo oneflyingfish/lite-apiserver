@@ -3,6 +3,7 @@ package kubeletOptions
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"LiteKube/pkg/common"
 
@@ -19,6 +20,7 @@ var (
 		HealthzPort:   10248,
 		Port:          10250,
 		TLSConfigPath: "",
+		ManifestsFold: "",
 	}
 )
 
@@ -27,6 +29,7 @@ type KubeletOption struct {
 	Hostname      string `yaml:"kubelet-hostname"`
 	HealthzPort   int    `yaml:"kubelet-healthzport"`
 	Port          int    `yaml:"kubelet-port"`
+	ManifestsFold string `yaml:"kubelet-pod-manifest-path"`
 	TLSConfigPath string `yaml:"kubelet-client-cert-config"`
 }
 
@@ -42,6 +45,7 @@ func (opt *KubeletOption) AddFlagsTo(fs *pflag.FlagSet) {
 	fs.IntVar(&opt.HealthzPort, "kubelet-healthzport", 0, fmt.Sprintf("healthz port of kubelet (default: %d)", defaultValue.HealthzPort))
 	fs.IntVar(&opt.Port, "kubelet-port", 0, fmt.Sprintf("port of kubelet (default: %d)", defaultValue.Port))
 	fs.StringVar(&opt.TLSConfigPath, "kubelet-client-cert-config", "", fmt.Sprintf("path to config store the X.509 Certificate information to kubelet (default: \"%s\")", defaultValue.TLSConfigPath))
+	fs.StringVar(&opt.ManifestsFold, "kubelet-pod-manifest-path", "", fmt.Sprintf("same value with kubelet --pod-manifest-path， set \"\" will disable lite-apiserver with alpha version (default: \"%s\")", defaultValue.TLSConfigPath))
 }
 
 func (opt *KubeletOption) LoadKubeletConfig() error {
@@ -87,6 +91,22 @@ func (opt *KubeletOption) MergeConfig(opt_file *KubeletOption) error {
 	common.Merge(opt, opt_file, &defaultValue, "HealthzPort")
 	common.Merge(opt, opt_file, &defaultValue, "Port")
 	common.Merge(opt, opt_file, &defaultValue, "TLSConfigPath")
+	common.Merge(opt, opt_file, &defaultValue, "ManifestsFold")
+
+	if common.IsZero(opt.ManifestsFold) {
+		klog.Warning("It seems that you have forgotten to set --kubelet-pod-manifest-path, lite-Apiserver will not work in alpha version")
+	} else {
+		if err := common.AbsPath(&opt.ManifestsFold); err != nil {
+			klog.Errorf("fail to translate %s to absolute path", opt.ManifestsFold)
+			return err
+		}
+
+		// ensure kubelet-client-cert-config exists
+		if err := os.MkdirAll(opt.ManifestsFold, os.ModePerm); err != nil {
+			klog.Errorf("fail to create fold path: %s", opt.ManifestsFold)
+			return err
+		}
+	}
 
 	// TLSConfigPath to absolute path
 	if err := common.AbsPath(&opt.TLSConfigPath); err != nil {
@@ -106,5 +126,6 @@ func (opt *KubeletOption) PrintArgs() error {
 	klog.Infof("--kubelet-healthzport=%d", opt.HealthzPort)
 	klog.Infof("--kubelet-port=%d", opt.Port)
 	klog.Infof("--kubelet-client-cert-config=%s", opt.TLSConfigPath)
+	klog.Infof("--kubelet-pod-manifest-path=%s", opt.ManifestsFold)
 	return nil
 }
