@@ -1,7 +1,6 @@
 package serverOptions
 
 import (
-	"LiteKube/pkg/certificate"
 	"LiteKube/pkg/common"
 	"LiteKube/pkg/lite-apiserver/cert"
 	"fmt"
@@ -20,7 +19,7 @@ var (
 		CATLSKeyPair: nil,
 		Hostname:     "127.0.0.1",
 		Port:         13500,
-		InsecurePort: 0,
+		InsecurePort: -1,
 		TLSStoreFold: "",
 		SyncDuration: 10,
 	}
@@ -47,7 +46,7 @@ func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
 	fs.StringVar(&serverConfigPath, "config", "", "config for lite-apiserver (lower priority to flags)")
 	fs.StringVar(&opt.Hostname, "hostname", "", fmt.Sprintf("hostname of lite-apiserver (default: %s)", defaultValue.Hostname))
 	fs.IntVar(&opt.Port, "port", 0, fmt.Sprintf("https port of lite-apiserver (default: %d)", defaultValue.Port))
-	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set 0 to disable (default: %d)", defaultValue.InsecurePort))
+	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set -1 to disable (default: %d)", defaultValue.InsecurePort))
 	fs.StringVar(&opt.TLSStoreFold, "tls-store-fold", "", fmt.Sprintf("fold path to store CA and server X.509 files for lite-apiserver, which contains {ca, server}.{pem, -key.pem} (default: \"%s\")", defaultValue.TLSStoreFold))
 	fs.IntVar(&opt.SyncDuration, "--syncduration", 0, fmt.Sprintf("max time for one-request last (default: %d)", defaultValue.SyncDuration))
 }
@@ -151,9 +150,8 @@ func (opt *ServerOption) LoadServerX509() error {
 		klog.Warningf("X.509 Server Certificate for lite-apiserver are lost, we will try to generate one.")
 
 		// caKey := rsa.PrivateKey.Load()
-		caCert := certificate.ReadCertificateFromFile(filepath.Join(opt.TLSStoreFold, "ca.pem"))
-		caKey := certificate.ReadPrivateKeyFromFile(filepath.Join(opt.TLSStoreFold, "ca-key.pem"))
-		if caCert == nil || caKey == nil {
+		caCert, caKey, valid := opt.CATLSKeyPair.GetTLSKeyPairCertificate()
+		if !valid {
 			klog.Error("fail to read CA X.509 for lite-apiserver when create server-certificate")
 			return fmt.Errorf("fail to read CA X.509 for lite-apiserver when create server-certificate")
 		}

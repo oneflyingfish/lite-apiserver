@@ -1,8 +1,12 @@
 package cert
 
 import (
+	"LiteKube/pkg/certificate"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -34,6 +38,29 @@ func (opt *TLSKeyPair) GetTLSKeyPair() (string, string, bool) {
 		return opt.certPath, opt.keyPath, true
 	} else {
 		return "", "", false
+	}
+}
+
+func (opt *TLSKeyPair) GetTLSKeyPairCertificate() (*x509.Certificate, *rsa.PrivateKey, bool) {
+	if !opt.Valid {
+		return nil, nil, false
+	}
+	caCert := certificate.ReadCertificateFromFile(opt.certPath)
+	caKey := certificate.ReadPrivateKeyFromFile(opt.keyPath)
+
+	if caCert == nil || caKey == nil {
+		return nil, nil, false
+	}
+
+	return caCert, caKey, true
+}
+
+func (opt *TLSKeyPair) GetCertBase64() []byte {
+	data, err := ioutil.ReadFile(opt.certPath)
+	if err != nil {
+		return nil
+	} else {
+		return data
 	}
 }
 

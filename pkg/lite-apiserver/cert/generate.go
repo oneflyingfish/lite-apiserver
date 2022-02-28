@@ -12,7 +12,7 @@ var defaultCA = certificate.CAConfig{
 	FileName:         "ca",
 	SubjectKeyId:     []byte{1, 2, 3, 4, 5},
 	NotAfter:         time.Now().AddDate(10, 0, 0),
-	KeyLength:        1024,
+	KeyLength:        2048,
 }
 
 var defaultServer = certificate.ServerConfig{
@@ -24,7 +24,7 @@ var defaultServer = certificate.ServerConfig{
 }
 
 var defaultClient = certificate.ClientConfig{
-	OrganizationName: []string{"CLIENT"},
+	OrganizationName: []string{"LITEKUBE"},
 	FileName:         "client",
 	SubjectKeyId:     []byte{1, 2, 3, 4, 7},
 	NotAfter:         time.Now().AddDate(10, 0, 0),
@@ -45,7 +45,7 @@ func CreateClientCert(foldPath string, caCert *x509.Certificate, caKey *rsa.Priv
 	return nil
 }
 
-func CreateClientCertBase64(foldPath string, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
-	certificate.GenerateClientCert(foldPath, defaultClient, caCert, caKey)
-	return nil
+// return cert_base64, key_base64, true/false
+func CreateClientCertBase64(caCert *x509.Certificate, caKey *rsa.PrivateKey) ([]byte, []byte, error) {
+	return certificate.GenerateClientCertBase64(defaultClient, caCert, caKey)
 }

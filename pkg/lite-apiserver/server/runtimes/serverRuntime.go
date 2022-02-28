@@ -2,13 +2,18 @@ package runtimes
 
 import (
 	"LiteKube/pkg/common"
+	"LiteKube/pkg/lite-apiserver/cert"
 	options "LiteKube/pkg/lite-apiserver/options/serverOptions"
 	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers"
 	"LiteKube/pkg/util"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sync"
+	"time"
 
 	"k8s.io/klog/v2"
 )
@@ -67,6 +72,7 @@ func (s *ServerRuntime) RunServer() error {
 		klog.Errorf("If you have specified a bad port=%d, the HTTPS server will refuse to start, please respecify it by --port=", s.Port)
 	}
 
+	time.Sleep(3 * time.Second) // wait 3s, maybe server run error
 	klog.Info("--------------------------------------------------------------------------------------------")
 	// give running tips
 	if s.httpServer == nil && s.httpsServer == nil {
@@ -113,7 +119,7 @@ func (s *ServerRuntime) RunHttpServer() error {
 		if err := s.httpServer.ListenAndServe(); err == http.ErrServerClosed || err == nil {
 			klog.Info("HTTP server is closed now.")
 		} else {
-			klog.Error(err.Error())
+			klog.Errorf("HTTP server may meet some errors while runnning, error tips: %s", err.Error())
 		}
 	}()
 
@@ -124,7 +130,9 @@ func (s *ServerRuntime) RunHttpServer() error {
 
 		<-s.ctx.Done()
 
-		common.CloseServer(s.httpServer, s.SyncDuration, "HTTP server is ready to close...")
+		if s.httpServer != nil {
+			common.CloseServer(s.httpServer, s.SyncDuration, "HTTP server is ready to close...")
+		}
 	}()
 
 	return nil
@@ -139,55 +147,89 @@ func (s *ServerRuntime) RunHttpsServer() error {
 		return fmt.Errorf("try to start the HTTPS server repeatedly")
 	}
 
-	// pool := x509.NewCertPool()
+	caCertPath, _, caValid := s.CATLSKeyPair.GetTLSKeyPair()
+	severCertPath, serverKeyPath, serverValid := s.ServerTLSKeyPair.GetTLSKeyPair()
+	if !caValid || !serverValid {
+		return fmt.Errorf("loss certificate")
+	}
 
-	// caCrt, err := ioutil.ReadFile(s.CATLSKeyPair.CACertPath)
-	// if err != nil {
-	// 	klog.Errorf("Read ca file err: %v", err)
-	// 	return err
-	// }
-	// pool.AppendCertsFromPEM(caCrt)
+	pool := x509.NewCertPool()
+	caCrt, err := ioutil.ReadFile(caCertPath)
+	if err != nil {
+		klog.Errorf("Read ca file err: %v", err)
+		return err
+	}
+	pool.AppendCertsFromPEM(caCrt)
 
-	// s.httpsServer = &http.Server{
-	// 	Addr:    fmt.Sprintf(":%d", s.Port),
-	// 	Handler: s.serverMux,
-	// 	TLSConfig: &tls.Config{
-	// 		ClientCAs:  pool,
-	// 		ClientAuth: tls.RequireAndVerifyClientCert,
-	// 	},
-	// }
+	s.httpsServer = &http.Server{
+		Addr:           fmt.Sprintf(":%d", s.Port),
+		Handler:        s.serverMux,
+		IdleTimeout:    90 * time.Second, // matches http.DefaultTransport keep-alive timeout
+		ReadTimeout:    4 * 60 * time.Minute,
+		WriteTimeout:   4 * 60 * time.Minute,
+		MaxHeaderBytes: 1 << 20,
+		TLSConfig: &tls.Config{
+			ClientCAs:  pool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		},
+	}
 
-	// // run https server in new routine
-	// go func() {
-	// 	defer s.wg.Done()
-	// 	defer func() { s.httpsServer = nil }()
-	// 	s.wg.Add(1)
+	// run https server in new routine
+	go func() {
+		defer s.wg.Done()
+		defer func() { s.httpsServer = nil }()
+		s.wg.Add(1)
 
-	// 	if err := s.httpsServer.ListenAndServeTLS(); err == http.ErrServerClosed || err == nil {
-	// 		klog.Info("HTTPS server is closed now.")
-	// 	} else {
-	// 		klog.Error(err.Error())
-	// 	}
-	// }()
+		if err := s.httpsServer.ListenAndServeTLS(severCertPath, serverKeyPath); err == http.ErrServerClosed || err == nil {
+			klog.Info("HTTPS server is closed now.")
+		} else {
+			klog.Errorf("HTTPS server may meet some errors while runnning, error tips: %s", err.Error())
+		}
+	}()
 
-	// // read close singnal and close HTTPS Server
-	// go func() {
-	// 	defer s.wg.Done()
-	// 	s.wg.Add(1)
+	// read close singnal and close HTTPS Server
+	go func() {
+		defer s.wg.Done()
+		s.wg.Add(1)
 
-	// 	<-s.ctx.Done()
+		<-s.ctx.Done()
 
-	// 	common.CloseServer(s.httpsServer, s.SyncDuration, "HTTP server is ready to close...")
-	// }()
+		if s.httpsServer != nil {
+			common.CloseServer(s.httpsServer, s.SyncDuration, "HTTP server is ready to close...")
+		}
+	}()
 	return nil
 }
 
 func (s *ServerRuntime) InitHandlers() error {
-	s.serverMux.HandleFunc("/debug/hello", ServerHandlers.Hello)
-	s.serverMux.Handle("/about", http.RedirectHandler("https://github.com/kubesys/LiteKube", http.StatusTemporaryRedirect))
+	//s.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "Welcome, here is LiteKube!\n") })
+	s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair))
+	s.serverMux.Handle("/debug/", ServerHandlers.NewDebugHandle(s.CATLSKeyPair))
 	return nil
 }
 
 func (s *ServerRuntime) WaitUtilExit() {
 	s.wg.Wait()
+}
+
+func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if caTLSKeyPair == nil || r.TLS == nil {
+			w.WriteHeader(http.StatusMethodNotAllowed) // http status: 400
+			fmt.Fprintf(w, "this work is not allowed by http\n")
+		} else {
+			caCert, caKey, ok := caTLSKeyPair.GetTLSKeyPairCertificate()
+			if !ok {
+				w.WriteHeader(http.StatusInternalServerError) // http status: 500
+				fmt.Fprintf(w, "fail to load CA informations")
+			}
+
+			clientCertBase64, clientKeyBase64, err := cert.CreateClientCertBase64(caCert, caKey)
+			if err != nil {
+				fmt.Fprintf(w, "error occured while generate certificate for client, tips: %s", err)
+			}
+
+			fmt.Fprintf(w, ServerHandlers.TLSReturnString, caTLSKeyPair.GetCertBase64(), clientCertBase64, clientKeyBase64)
+		}
+	}
 }

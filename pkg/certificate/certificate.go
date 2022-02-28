@@ -43,14 +43,16 @@ type ClientConfig struct {
 }
 
 func GenerateCA(foldPath string, config CAConfig) error {
+	max := new(big.Int).Lsh(big.NewInt(1), 128)   // 1<<128
+	serialNumber, _ := rand.Int(rand.Reader, max) //random value in [0, max)
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(1653),
+		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: config.OrganizationName,
 		},
-		NotBefore:             time.Now(),
-		NotAfter:              config.NotAfter,
-		SubjectKeyId:          config.SubjectKeyId,
+		NotBefore: time.Now(),
+		NotAfter:  config.NotAfter,
+		//SubjectKeyId:          config.SubjectKeyId,
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
@@ -61,8 +63,10 @@ func GenerateCA(foldPath string, config CAConfig) error {
 }
 
 func GenerateServerCert(foldPath string, config ServerConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
+	max := new(big.Int).Lsh(big.NewInt(1), 128)   // 1<<128
+	serialNumber, _ := rand.Int(rand.Reader, max) //random value in [0, max)
 	server := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: config.OrganizationName,
 		},
@@ -85,32 +89,34 @@ func GenerateServerCert(foldPath string, config ServerConfig, caCert *x509.Certi
 }
 
 func GenerateClientCert(foldPath string, config ClientConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
+	max := new(big.Int).Lsh(big.NewInt(1), 128)   // 1<<128
+	serialNumber, _ := rand.Int(rand.Reader, max) //random value in [0, max)
 	client := &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: config.OrganizationName,
 		},
-		NotBefore:    time.Now(),
-		NotAfter:     config.NotAfter,
-		SubjectKeyId: config.SubjectKeyId,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		NotBefore: time.Now(),
+		NotAfter:  config.NotAfter,
+		//SubjectKeyId: config.SubjectKeyId,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
 	privCli, _ := rsa.GenerateKey(rand.Reader, caKey.N.BitLen())
 	return CreateCertificateFile(foldPath, config.FileName, client, privCli, caCert, caKey)
 }
 
-func GenerateClientCertBase64(foldPath string, config ClientConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) ([]byte, []byte, error) {
+func GenerateClientCertBase64(config ClientConfig, caCert *x509.Certificate, caKey *rsa.PrivateKey) ([]byte, []byte, error) {
 	client := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
 			Organization: config.OrganizationName,
 		},
-		NotBefore:    time.Now(),
-		NotAfter:     config.NotAfter,
-		SubjectKeyId: config.SubjectKeyId,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		NotBefore: time.Now(),
+		NotAfter:  config.NotAfter,
+		//SubjectKeyId: config.SubjectKeyId,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
 	privCli, _ := rsa.GenerateKey(rand.Reader, caKey.N.BitLen())
 	return CreateCertificateBase64(client, privCli, caCert, caKey)
@@ -181,6 +187,7 @@ func CreateCertificateFile(foldPath string, name string, cert *x509.Certificate,
 	return nil
 }
 
+// return cert_base64, key_base64, true/false
 func CreateCertificateBase64(cert *x509.Certificate, key *rsa.PrivateKey, caCert *x509.Certificate, caKey *rsa.PrivateKey) ([]byte, []byte, error) {
 	// value copy
 	privateKey := key
@@ -210,7 +217,7 @@ func CreateCertificateBase64(cert *x509.Certificate, key *rsa.PrivateKey, caCert
 	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
 
 	var pk = &pem.Block{
-		Type:    "PRIVATE KEY",
+		Type:    "RSA PRIVATE KEY",
 		Headers: map[string]string{},
 		Bytes:   privateKeyBytes,
 	}
