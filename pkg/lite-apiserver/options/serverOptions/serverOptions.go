@@ -1,9 +1,13 @@
 package serverOptions
 
 import (
+	"LiteKube/pkg/certificate"
 	"LiteKube/pkg/common"
+	"LiteKube/pkg/lite-apiserver/cert"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
@@ -13,27 +17,29 @@ import (
 var (
 	serverConfigPath string
 	defaultValue     ServerOption = ServerOption{
-		CATLSKeyPair:    nil,
-		Hostname:        "127.0.0.1",
-		Port:            13500,
-		InsecurePort:    0,
-		CATLSConfigPath: "",
-		SyncDuration:    10,
+		CATLSKeyPair: nil,
+		Hostname:     "127.0.0.1",
+		Port:         13500,
+		InsecurePort: 0,
+		TLSStoreFold: "",
+		SyncDuration: 10,
 	}
 )
 
 type ServerOption struct {
-	CATLSKeyPair    *ServerTLSKeyPair
-	Hostname        string `yaml:"hostname"`
-	Port            int    `yaml:"port"`
-	InsecurePort    int    `yaml:"insecure-port"`
-	CATLSConfigPath string `yaml:"ca-tls-configpath"`
-	SyncDuration    int    `yaml:"syncduration"`
+	CATLSKeyPair     *cert.TLSKeyPair
+	ServerTLSKeyPair *cert.TLSKeyPair
+	Hostname         string `yaml:"hostname"`
+	Port             int    `yaml:"port"`
+	InsecurePort     int    `yaml:"insecure-port"`
+	TLSStoreFold     string `yaml:"tls-store-fold"`
+	SyncDuration     int    `yaml:"syncduration"`
 }
 
 func NewServerOptions() *ServerOption {
 	return &ServerOption{
-		CATLSKeyPair: NewServerTLSKeyPair(),
+		CATLSKeyPair:     cert.NewTLSKeyPair(),
+		ServerTLSKeyPair: cert.NewTLSKeyPair(),
 	}
 }
 
@@ -42,7 +48,7 @@ func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
 	fs.StringVar(&opt.Hostname, "hostname", "", fmt.Sprintf("hostname of lite-apiserver (default: %s)", defaultValue.Hostname))
 	fs.IntVar(&opt.Port, "port", 0, fmt.Sprintf("https port of lite-apiserver (default: %d)", defaultValue.Port))
 	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set 0 to disable (default: %d)", defaultValue.InsecurePort))
-	fs.StringVar(&opt.CATLSConfigPath, "ca-tls-configpath", "", fmt.Sprintf("path to config store the X.509 Certificate information for lite-apiserver (default: \"%s\")", defaultValue.CATLSConfigPath))
+	fs.StringVar(&opt.TLSStoreFold, "tls-store-fold", "", fmt.Sprintf("fold path to store CA and server X.509 files for lite-apiserver, which contains {ca, server}.{pem, -key.pem} (default: \"%s\")", defaultValue.TLSStoreFold))
 	fs.IntVar(&opt.SyncDuration, "--syncduration", 0, fmt.Sprintf("max time for one-request last (default: %d)", defaultValue.SyncDuration))
 }
 
@@ -89,12 +95,12 @@ func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
 	common.Merge(opt, opt_file, &defaultValue, "Hostname")
 	common.Merge(opt, opt_file, &defaultValue, "Port")
 	common.Merge(opt, opt_file, &defaultValue, "InsecurePort")
-	common.Merge(opt, opt_file, &defaultValue, "CATLSConfigPath")
+	common.Merge(opt, opt_file, &defaultValue, "TLSStoreFold")
 	common.Merge(opt, opt_file, &defaultValue, "SyncDuration")
 
 	// CATLSConfigPath to absolute path
-	if err := common.AbsPath(&opt.CATLSConfigPath); err != nil {
-		klog.Errorf("fail to translate %s to absolute path", opt.CATLSConfigPath)
+	if err := common.AbsPath(&opt.TLSStoreFold); err != nil {
+		klog.Errorf("fail to translate %s to absolute path", opt.TLSStoreFold)
 		return err
 	}
 
@@ -106,11 +112,101 @@ func (opt *ServerOption) PrintArgs() error {
 	klog.Infof("--hostname=%s ", opt.Hostname)
 	klog.Infof("--port=%d ", opt.Port)
 	klog.Infof("--insecure-port=%d ", opt.InsecurePort)
-	klog.Infof("--ca-tls-configpath=%s", opt.CATLSConfigPath)
+	klog.Infof("--tls-store-fold=%s", opt.TLSStoreFold)
 	klog.Infof("--syncduration=%d", opt.SyncDuration)
 	return nil
 }
 
 func (opt *ServerOption) LoadX509() error {
-	return opt.CATLSKeyPair.LoadFromConfig(&opt.CATLSConfigPath)
+	if err := opt.LoadCAX509(); err != nil {
+		return err
+	}
+
+	if err := opt.LoadServerX509(); err != nil {
+		return err
+	}
+	//return opt.CATLSKeyPair.LoadFromConfig(&opt.TLSConfigPath)
+	return nil
+}
+
+func (opt *ServerOption) LoadCAX509() error {
+	if err := opt.tryLoadCAX509(); err != nil {
+		klog.Warningf("X.509 CA Certificate for lite-apiserver are lost, we will try to generate one.")
+		cert.CreateCACert(opt.TLSStoreFold)
+
+		if e := opt.tryLoadCAX509(); e != nil {
+			klog.Warningf("fail to create CA file for lite-apiserver in %s", opt.TLSStoreFold)
+			return err
+		}
+
+		klog.Info("Success to create new CA Certificate for lite-apiserver")
+	}
+
+	klog.Info("Success to Load CA Certificate for lite-apiserver")
+	return nil
+}
+
+func (opt *ServerOption) LoadServerX509() error {
+	if err := opt.tryLoadServerX509(); err != nil {
+		klog.Warningf("X.509 Server Certificate for lite-apiserver are lost, we will try to generate one.")
+
+		// caKey := rsa.PrivateKey.Load()
+		caCert := certificate.ReadCertificateFromFile(filepath.Join(opt.TLSStoreFold, "ca.pem"))
+		caKey := certificate.ReadPrivateKeyFromFile(filepath.Join(opt.TLSStoreFold, "ca-key.pem"))
+		if caCert == nil || caKey == nil {
+			klog.Error("fail to read CA X.509 for lite-apiserver when create server-certificate")
+			return fmt.Errorf("fail to read CA X.509 for lite-apiserver when create server-certificate")
+		}
+
+		if err := cert.CreateServerCert(opt.TLSStoreFold, caCert, caKey); err != nil {
+			klog.Errorf("fail to create Server file for lite-apiserver in %s", opt.TLSStoreFold)
+			return err
+		}
+
+		if e := opt.tryLoadServerX509(); e != nil {
+			klog.Errorf("Server Certificate file for lite-apiserver is not useful in %s", opt.TLSStoreFold)
+			return err
+		}
+
+		klog.Info("Success to create new Server Certificate for lite-apiserver")
+	}
+
+	klog.Info("Success to load Server Certificate for lite-apiserver")
+	return nil
+}
+
+func (opt *ServerOption) tryLoadCAX509() error {
+	certPath := filepath.Join(opt.TLSStoreFold, "ca.pem")
+	keyPath := filepath.Join(opt.TLSStoreFold, "ca-key.pem")
+
+	if _, err := os.Stat(certPath); err != nil {
+		return fmt.Errorf("bad ca certificate")
+	}
+
+	if _, err := os.Stat(keyPath); err != nil {
+		return fmt.Errorf("bad ca private key")
+	}
+
+	if err := opt.CATLSKeyPair.SetTLSKeyPair(certPath, keyPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (opt *ServerOption) tryLoadServerX509() error {
+	certPath := filepath.Join(opt.TLSStoreFold, "server.pem")
+	keyPath := filepath.Join(opt.TLSStoreFold, "server-key.pem")
+
+	if _, err := os.Stat(certPath); err != nil {
+		return fmt.Errorf("bad server certificate")
+	}
+
+	if _, err := os.Stat(keyPath); err != nil {
+		return fmt.Errorf("bad server private key")
+	}
+
+	if err := opt.ServerTLSKeyPair.SetTLSKeyPair(certPath, keyPath); err != nil {
+		return err
+	}
+	return nil
 }

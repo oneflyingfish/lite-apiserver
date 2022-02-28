@@ -24,6 +24,7 @@ func NewServerRunOption() *ServerRunOption {
 	}
 }
 
+// all operations are integrated to obtain a complete set of parameters
 func (opt *ServerRunOption) GetNamedFlagsSet() (fsSet cliflag.NamedFlagSets) {
 	opt.ServerOption.AddFlagsTo(fsSet.FlagSet("lite-apiserver"))
 	opt.ApiserverOptions.AddFlagsTo(fsSet.FlagSet("kube-apiserver"))
@@ -70,6 +71,7 @@ func (opt *ServerRunOption) Complete() error {
 	return nil
 }
 
+// show all the parameters used finally
 func (opt *ServerRunOption) PrintArgs() error {
 	var err_ error
 

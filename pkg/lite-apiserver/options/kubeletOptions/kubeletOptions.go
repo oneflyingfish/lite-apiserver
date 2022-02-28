@@ -1,6 +1,7 @@
 package kubeletOptions
 
 import (
+	"LiteKube/pkg/lite-apiserver/cert"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,7 +26,7 @@ var (
 )
 
 type KubeletOption struct {
-	TLSKeyPair    *KubeletTLSKeyPair
+	TLSKeyPair    *cert.TLSKeyPair
 	Hostname      string `yaml:"kubelet-hostname"`
 	HealthzPort   int    `yaml:"kubelet-healthzport"`
 	Port          int    `yaml:"kubelet-port"`
@@ -35,7 +36,7 @@ type KubeletOption struct {
 
 func NewKubeletOption() *KubeletOption {
 	return &KubeletOption{
-		TLSKeyPair: NewKubeletTLSKeyPair(),
+		TLSKeyPair: cert.NewTLSKeyPair(),
 	}
 }
 
@@ -117,7 +118,34 @@ func (opt *KubeletOption) MergeConfig(opt_file *KubeletOption) error {
 }
 
 func (opt *KubeletOption) LoadX509() error {
-	return opt.TLSKeyPair.LoadFromConfig(&opt.TLSConfigPath)
+	if len(opt.TLSConfigPath) <= 0 {
+		err := "loss config for X.509 Certificate information to kubelet ,you can set by \"--kubelet-client-cert-config=$path\""
+		klog.Error(err)
+		return fmt.Errorf(err)
+	}
+
+	// load config
+	bytes, err := ioutil.ReadFile(opt.TLSConfigPath)
+	if err != nil {
+		klog.Errorf("fail to load %s while load X.509 Certificate information to kubelet", opt.TLSConfigPath)
+		return err
+	}
+
+	data := make(map[string]string)
+
+	// unmarshal config
+	if err := yaml.Unmarshal(bytes, &data); err != nil {
+		klog.Errorf("fail to unmarshal config while load X.509 Certificate information to kubelet", opt.TLSConfigPath)
+		return err
+	}
+
+	if err := opt.TLSKeyPair.LoadFromMap(data); err != nil {
+		klog.Errorf("fail to load X.509 Certificate information to kubelet from config file")
+	}
+
+	klog.Info("success to load X.509 Certificate information to kubelet from config file")
+
+	return nil
 }
 
 func (opt *KubeletOption) PrintArgs() error {
