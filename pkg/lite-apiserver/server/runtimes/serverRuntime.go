@@ -203,8 +203,8 @@ func (s *ServerRuntime) RunHttpsServer() error {
 
 func (s *ServerRuntime) InitHandlers() error {
 	//s.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "Welcome, here is LiteKube!\n") })
-	s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair))
-	s.serverMux.Handle("/debug/", ServerHandlers.NewDebugHandle(s.CATLSKeyPair))
+	s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair, s.Port))
+	s.serverMux.Handle("/debug/", ServerHandlers.NewDebugHandle(s.CATLSKeyPair, s.Port))
 	return nil
 }
 
@@ -212,7 +212,7 @@ func (s *ServerRuntime) WaitUtilExit() {
 	s.wg.Wait()
 }
 
-func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair) func(w http.ResponseWriter, r *http.Request) {
+func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair, port int) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if caTLSKeyPair == nil || r.TLS == nil {
 			w.WriteHeader(http.StatusMethodNotAllowed) // http status: 400
@@ -229,7 +229,7 @@ func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair) func(w http.ResponseWriter, r 
 				fmt.Fprintf(w, "error occured while generate certificate for client, tips: %s", err)
 			}
 
-			fmt.Fprintf(w, ServerHandlers.TLSReturnString, caTLSKeyPair.GetCertBase64(), clientCertBase64, clientKeyBase64)
+			fmt.Fprint(w, ServerHandlers.TLSReturnString(ServerHandlers.TLSInfo{CACert: string(caTLSKeyPair.GetCertBase64()), ClientCert: string(clientCertBase64), ClientKey: string(clientKeyBase64), Port: port}.HTMLBR()))
 		}
 	}
 }

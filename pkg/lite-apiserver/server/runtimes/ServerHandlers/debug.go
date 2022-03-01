@@ -11,7 +11,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-var TLSReturnString string = "Create client.pem and client-key.pem on your disk with the following command: \ncat >ca.pem<<EOF\n%sEOF\n\ncat >client.pem<<EOF\n%sEOF\n\ncat >client-key.pem<<EOF\n%sEOF\n\nTips: you can run `openssl pkcs12 -export -clcerts -in client.pem -inkey client-key.pem -out client.p12` in cmd.exe to create a certificate for windows"
+//var TLSReturnString string = "Create client.pem and client-key.pem on your disk with the following command: \ncat >ca.pem<<EOF\n%sEOF\n\ncat >client.pem<<EOF\n%sEOF\n\ncat >client-key.pem<<EOF\n%sEOF\n\nTips: you can run `openssl pkcs12 -export -clcerts -in client.pem -inkey client-key.pem -out client.p12` in cmd.exe to create a certificate for windows"
 var prefixUrl string = "/debug"
 
 type HandleFunc func(w http.ResponseWriter, r *http.Request) error
@@ -22,15 +22,15 @@ type DebugHandle struct {
 	caKeyPair *cert.TLSKeyPair
 }
 
-func NewDebugHandle(caTLSKeyPair *cert.TLSKeyPair) DebugHandle {
+func NewDebugHandle(caTLSKeyPair *cert.TLSKeyPair, port int) DebugHandle {
 	return DebugHandle{
 		prefixUrl: prefixUrl,
-		handles:   createDebugHandle(caTLSKeyPair),
+		handles:   createDebugHandle(caTLSKeyPair, port),
 		caKeyPair: caTLSKeyPair,
 	}
 }
 
-func createDebugHandle(caTLSKeyPair *cert.TLSKeyPair) map[string]HandleFunc {
+func createDebugHandle(caTLSKeyPair *cert.TLSKeyPair, port int) map[string]HandleFunc {
 	handles := make(map[string]HandleFunc)
 	handles["/hello"] = func(w http.ResponseWriter, r *http.Request) error {
 		fmt.Fprintf(w, "Hello to see you, LiteKube is here!\n")
@@ -57,7 +57,7 @@ func createDebugHandle(caTLSKeyPair *cert.TLSKeyPair) map[string]HandleFunc {
 				return fmt.Errorf("error occured while generate certificate for client, tips: %s", err)
 			}
 
-			fmt.Fprintf(w, TLSReturnString, caTLSKeyPair.GetCertBase64(), clientCertBase64, clientKeyBase64)
+			fmt.Fprint(w, TLSReturnString(TLSInfo{CACert: string(caTLSKeyPair.GetCertBase64()), ClientCert: string(clientCertBase64), ClientKey: string(clientKeyBase64), Port: port}.HTMLBR()))
 		}
 		return nil
 	}
