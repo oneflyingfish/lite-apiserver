@@ -1,17 +1,19 @@
-package ServerHandlers
+package tls
 
 import (
+	"LiteKube/pkg/common"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
 )
 
 type TLSInfo struct {
-	CACert     string
-	ClientCert string
-	ClientKey  string
-	Port       int
+	CACert     string `json:"CACert"`
+	ClientCert string `json:"ClientCert"`
+	ClientKey  string `json:"ClientKey"`
+	Port       int    `json:"Port"`
 }
 
 func (tlsInfo TLSInfo) HTMLBR() TLSInfo {
@@ -23,19 +25,35 @@ func (tlsInfo TLSInfo) HTMLBR() TLSInfo {
 	}
 }
 
-func TLSReturnString(info TLSInfo) string {
+func TLSReturnHTML(info TLSInfo) string {
 	buffer := new(bytes.Buffer)
 	temp, err := template.New("").Parse(tlsHtmlTemplate)
 	if err != nil {
 		return fmt.Sprintf("We meet some errors: %s", err)
 	}
 
-	err = temp.Execute(buffer, info)
+	err = temp.Execute(buffer, info.HTMLBR())
 	if err != nil {
 		return fmt.Sprintf("We meet some errors: %s", err)
 	}
 
 	return buffer.String()
+}
+
+func TLSReturnJson(info TLSInfo) string {
+	jsonBytes, err := json.Marshal(info)
+	if err != nil {
+		return common.ErrorJson("fail to Marshal json")
+	}
+	return string(jsonBytes)
+}
+
+func TLSReturn(info TLSInfo, isRaw bool) string {
+	if isRaw {
+		return TLSReturnHTML(info)
+	} else {
+		return TLSReturnJson(info)
+	}
 }
 
 var tlsHtmlTemplate string = `

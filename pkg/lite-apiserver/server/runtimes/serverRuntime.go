@@ -4,7 +4,8 @@ import (
 	"LiteKube/pkg/common"
 	"LiteKube/pkg/lite-apiserver/cert"
 	options "LiteKube/pkg/lite-apiserver/options/serverOptions"
-	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers"
+	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/debug"
+	handleTLS "LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/tls"
 	"LiteKube/pkg/util"
 	"context"
 	"crypto/tls"
@@ -204,7 +205,7 @@ func (s *ServerRuntime) RunHttpsServer() error {
 func (s *ServerRuntime) InitHandlers() error {
 	//s.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "Welcome, here is LiteKube!\n") })
 	s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair, s.Port))
-	s.serverMux.Handle("/debug/", ServerHandlers.NewDebugHandle(s.CATLSKeyPair, s.Port))
+	s.serverMux.Handle("/debug/", debug.NewDebugHandle(s.CATLSKeyPair, s.Port))
 	return nil
 }
 
@@ -214,22 +215,12 @@ func (s *ServerRuntime) WaitUtilExit() {
 
 func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair, port int) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if caTLSKeyPair == nil || r.TLS == nil {
-			w.WriteHeader(http.StatusMethodNotAllowed) // http status: 400
-			fmt.Fprintf(w, "this work is not allowed by http\n")
-		} else {
-			caCert, caKey, ok := caTLSKeyPair.GetTLSKeyPairCertificate()
-			if !ok {
-				w.WriteHeader(http.StatusInternalServerError) // http status: 500
-				fmt.Fprintf(w, "fail to load CA informations")
-			}
-
-			clientCertBase64, clientKeyBase64, err := cert.CreateClientCertBase64(caCert, caKey)
-			if err != nil {
-				fmt.Fprintf(w, "error occured while generate certificate for client, tips: %s", err)
-			}
-
-			fmt.Fprint(w, ServerHandlers.TLSReturnString(ServerHandlers.TLSInfo{CACert: string(caTLSKeyPair.GetCertBase64()), ClientCert: string(clientCertBase64), ClientKey: string(clientKeyBase64), Port: port}.HTMLBR()))
+		statusCode, err := handleTLS.TLSHandleFunc(caTLSKeyPair, port, true)(w, r)
+		if statusCode != http.StatusOK {
+			w.WriteHeader(statusCode)
+		}
+		if err != nil {
+			fmt.Fprint(w, common.ErrorString(err.Error(), r.URL.Query().Get("format") != "json"))
 		}
 	}
 }
