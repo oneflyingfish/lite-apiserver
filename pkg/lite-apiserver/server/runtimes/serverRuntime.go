@@ -2,10 +2,10 @@ package runtimes
 
 import (
 	"LiteKube/pkg/common"
-	"LiteKube/pkg/lite-apiserver/cert"
 	options "LiteKube/pkg/lite-apiserver/options/serverOptions"
+	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers"
 	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/debug"
-	handleTLS "LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/tls"
+	tlsHandle "LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/tls"
 	"LiteKube/pkg/util"
 	"context"
 	"crypto/tls"
@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/emicklei/go-restful"
+
 	"k8s.io/klog/v2"
 )
 
@@ -24,9 +26,9 @@ type ServerRuntime struct {
 	// BackendTimeout int
 
 	// runtime args
-	serverMux   *http.ServeMux
-	httpServer  *http.Server
-	httpsServer *http.Server
+	serverContainer *restful.Container
+	httpServer      *http.Server
+	httpsServer     *http.Server
 
 	// routines safe args
 	ctx  context.Context
@@ -38,7 +40,7 @@ func CreateServerRuntime(serverOptions *options.ServerOption, ctx_parent context
 	ctx, stop := context.WithCancel(ctx_parent)
 	return &ServerRuntime{
 		serverOptions,
-		http.NewServeMux(),
+		restful.NewContainer(),
 		nil,
 		nil,
 		ctx,
@@ -106,7 +108,7 @@ func (s *ServerRuntime) RunHttpServer() error {
 	s.httpServer = &http.Server{
 		//Addr:    fmt.Sprintf("%s:%d", s.Hostname, s.InsecurePort),
 		Addr:    fmt.Sprintf(":%d", s.InsecurePort),
-		Handler: s.serverMux,
+		Handler: s.serverContainer,
 	}
 
 	// run http server in new routine
@@ -164,7 +166,7 @@ func (s *ServerRuntime) RunHttpsServer() error {
 
 	s.httpsServer = &http.Server{
 		Addr:           fmt.Sprintf(":%d", s.Port),
-		Handler:        s.serverMux,
+		Handler:        s.serverContainer,
 		IdleTimeout:    90 * time.Second, // matches http.DefaultTransport keep-alive timeout
 		ReadTimeout:    4 * 60 * time.Minute,
 		WriteTimeout:   4 * 60 * time.Minute,
@@ -204,8 +206,22 @@ func (s *ServerRuntime) RunHttpsServer() error {
 
 func (s *ServerRuntime) InitHandlers() error {
 	//s.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "Welcome, here is LiteKube!\n") })
-	s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair, s.Port))
-	s.serverMux.Handle("/debug/", debug.NewDebugHandle(s.CATLSKeyPair, s.Port))
+	// s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair, s.Port))
+	// s.serverMux.Handle("/debug/", debug.NewDebugHandle(s.CATLSKeyPair, s.Port))
+
+	// add RestFul for debug
+	if s.ServerOption.Debug {
+		klog.Warning(">>>>> Notice, you're running in debug mode, it may not be safe! <<<<<")
+		debugHandle := debug.NewDebugHandle(s.CATLSKeyPair, s.Port)
+		debugHandle.RegisterWebService(s.serverContainer)
+	}
+
+	// add RestFul for TLS-access
+	tlsHandle.RegisterWebService(s.serverContainer, s.CATLSKeyPair, s.Port, true)
+
+	// add RestFul for API
+	ServerHandlers.GlobalRegisterWebService(s.serverContainer)
+
 	return nil
 }
 
@@ -213,14 +229,14 @@ func (s *ServerRuntime) WaitUtilExit() {
 	s.wg.Wait()
 }
 
-func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair, port int) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		statusCode, err := handleTLS.TLSHandleFunc(caTLSKeyPair, port, true)(w, r)
-		if statusCode != http.StatusOK {
-			w.WriteHeader(statusCode)
-		}
-		if err != nil {
-			fmt.Fprint(w, common.ErrorString(err.Error(), r.URL.Query().Get("format") != "json"))
-		}
-	}
-}
+// func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair, port int) func(w http.ResponseWriter, r *http.Request) {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		statusCode, err := handleTLS.TLSHandleFunc(caTLSKeyPair, port, true)(w, r)
+// 		if statusCode != http.StatusOK {
+// 			w.WriteHeader(statusCode)
+// 		}
+// 		if err != nil {
+// 			fmt.Fprint(w, common.ErrorString(err.Error(), r.URL.Query().Get("format") != "json"))
+// 		}
+// 	}
+// }

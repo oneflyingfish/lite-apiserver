@@ -3,6 +3,7 @@ module LiteKube
 go 1.17
 
 require (
+	github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5

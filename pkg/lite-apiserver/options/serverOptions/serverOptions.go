@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/spf13/pflag"
 	"gopkg.in/yaml.v2"
@@ -16,18 +17,21 @@ import (
 var (
 	serverConfigPath string
 	defaultValue     ServerOption = ServerOption{
-		CATLSKeyPair: nil,
-		Hostname:     "127.0.0.1",
-		Port:         13500,
-		InsecurePort: -1,
-		TLSStoreFold: "",
-		SyncDuration: 10,
+		CATLSKeyPair:     nil,
+		ServerTLSKeyPair: nil,
+		Debug:            false,
+		Hostname:         "127.0.0.1",
+		Port:             13500,
+		InsecurePort:     -1,
+		TLSStoreFold:     "",
+		SyncDuration:     10,
 	}
 )
 
 type ServerOption struct {
 	CATLSKeyPair     *cert.TLSKeyPair
 	ServerTLSKeyPair *cert.TLSKeyPair
+	Debug            bool
 	Hostname         string `yaml:"hostname"`
 	Port             int    `yaml:"port"`
 	InsecurePort     int    `yaml:"insecure-port"`
@@ -48,12 +52,14 @@ func (opt *ServerOption) AddFlagsTo(fs *pflag.FlagSet) {
 	fs.IntVar(&opt.Port, "port", 0, fmt.Sprintf("https port of lite-apiserver (default: %d)", defaultValue.Port))
 	fs.IntVar(&opt.InsecurePort, "insecure-port", 0, fmt.Sprintf("http port of lite-apiserver, not secure, set -1 to disable (default: %d)", defaultValue.InsecurePort))
 	fs.StringVar(&opt.TLSStoreFold, "tls-store-fold", "", fmt.Sprintf("fold path to store CA and server X.509 files for lite-apiserver, which contains {ca, server}.{pem, -key.pem} (default: \"%s\")", defaultValue.TLSStoreFold))
-	fs.IntVar(&opt.SyncDuration, "--syncduration", 0, fmt.Sprintf("max time for one-request last (default: %d)", defaultValue.SyncDuration))
+	fs.IntVar(&opt.SyncDuration, "syncduration", 0, fmt.Sprintf("max time for one-request last (default: %d)", defaultValue.SyncDuration))
+	fs.BoolVar(&opt.Debug, "debug", false, fmt.Sprintf("enable debug or not, this value is not allow to set with config-file (default: %s)", strconv.FormatBool(defaultValue.Debug)))
 }
 
 func (opt *ServerOption) LoadServerConfig() error {
 	opt_file := &ServerOption{
 		CATLSKeyPair: nil,
+		Debug:        false,
 	}
 
 	if len(serverConfigPath) > 0 {
@@ -96,6 +102,7 @@ func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
 	common.Merge(opt, opt_file, &defaultValue, "InsecurePort")
 	common.Merge(opt, opt_file, &defaultValue, "TLSStoreFold")
 	common.Merge(opt, opt_file, &defaultValue, "SyncDuration")
+	common.Merge(opt, opt_file, &defaultValue, "Debug")
 
 	// CATLSConfigPath to absolute path
 	if err := common.AbsPath(&opt.TLSStoreFold); err != nil {
@@ -107,6 +114,7 @@ func (opt *ServerOption) MergeConfig(opt_file *ServerOption) error {
 }
 
 func (opt *ServerOption) PrintArgs() error {
+	klog.Infof("--debug=%s ", strconv.FormatBool(opt.Debug))
 	klog.Infof("--config=%s ", serverConfigPath)
 	klog.Infof("--hostname=%s ", opt.Hostname)
 	klog.Infof("--port=%d ", opt.Port)

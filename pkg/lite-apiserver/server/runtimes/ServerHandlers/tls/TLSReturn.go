@@ -70,6 +70,7 @@ var tlsHtmlTemplate string = `
 
 	<body>
 		<h2> How to get certificate for HTTPS?</h2>
+		Get json-format response by set "?format=json"<br>
 		<p class="ridge">
 			<code>
 				# run this in your terminal<br>
@@ -88,7 +89,7 @@ var tlsHtmlTemplate string = `
 				EOF 
             </code>
 		</p>
-		you will see ca.pem, client.pem and client-key.pem in your current fold.<br><br>
+		you will see ca.pem, client.pem and client-key.pem in your current fold.<br>
 		
 		<h2> How to get certificate for HTTPS?</h2>
 		<p class="ridge">
