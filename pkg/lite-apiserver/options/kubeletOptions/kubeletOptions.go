@@ -26,12 +26,12 @@ var (
 )
 
 type KubeletOption struct {
-	TLSKeyPair    *cert.TLSKeyPair
-	Hostname      string `yaml:"kubelet-hostname"`
-	HealthzPort   int    `yaml:"kubelet-healthzport"`
-	Port          int    `yaml:"kubelet-port"`
-	ManifestsFold string `yaml:"kubelet-pod-manifest-path"`
-	TLSConfigPath string `yaml:"kubelet-client-cert-config"`
+	TLSKeyPair    *cert.TLSKeyPair `json:"-"`
+	Hostname      string           `yaml:"kubelet-hostname"`
+	HealthzPort   int              `yaml:"kubelet-healthzport"`
+	Port          int              `yaml:"kubelet-port"`
+	ManifestsFold string           `yaml:"kubelet-pod-manifest-path"`
+	TLSConfigPath string           `yaml:"kubelet-client-cert-config"`
 }
 
 func NewKubeletOption() *KubeletOption {

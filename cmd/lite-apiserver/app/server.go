@@ -5,6 +5,7 @@ import (
 	"LiteKube/pkg/lite-apiserver/server"
 	"LiteKube/pkg/version"
 	verflag "LiteKube/pkg/version/varflag"
+	"flag"
 	"fmt"
 	"io"
 
@@ -67,17 +68,21 @@ func NewServerCommand() *cobra.Command {
 		fs.AddFlagSet(f)
 	}
 
+	var fsSet cliflag.NamedFlagSets
+	fsSet.FlagSet("Logging (unable to set with config)").AddGoFlagSet(flag.CommandLine)
 	// better print
 	usageFmt := "Usage:\n  %s\n"
 	cols, _, _ := TerminalSize(cmd.OutOrStdout()) // terminal_width, terminal_height, error
 	cmd.SetUsageFunc(func(cmd *cobra.Command) error {
 		fmt.Fprintf(cmd.OutOrStderr(), usageFmt, cmd.UseLine())
 		cliflag.PrintSections(cmd.OutOrStderr(), namedFlagSets, cols)
+		cliflag.PrintSections(cmd.OutOrStderr(), fsSet, cols)
 		return nil
 	})
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		fmt.Fprintf(cmd.OutOrStdout(), "%s\n\n"+usageFmt, cmd.Long, cmd.UseLine())
 		cliflag.PrintSections(cmd.OutOrStdout(), namedFlagSets, cols)
+		cliflag.PrintSections(cmd.OutOrStderr(), fsSet, cols)
 	})
 
 	return cmd

@@ -2,3 +2,4 @@ vendor
 test
 args
 cmd/lite-apiserver/lite-apiserver
+litekube-logs

@@ -29,14 +29,14 @@ var (
 )
 
 type ServerOption struct {
-	CATLSKeyPair     *cert.TLSKeyPair
-	ServerTLSKeyPair *cert.TLSKeyPair
-	Debug            bool
-	Hostname         string `yaml:"hostname"`
-	Port             int    `yaml:"port"`
-	InsecurePort     int    `yaml:"insecure-port"`
-	TLSStoreFold     string `yaml:"tls-store-fold"`
-	SyncDuration     int    `yaml:"syncduration"`
+	CATLSKeyPair     *cert.TLSKeyPair `json:"-"`
+	ServerTLSKeyPair *cert.TLSKeyPair `json:"-"`
+	Debug            bool             `json:"-"`
+	Hostname         string           `yaml:"hostname"`
+	Port             int              `yaml:"port"`
+	InsecurePort     int              `yaml:"insecure-port"`
+	TLSStoreFold     string           `yaml:"tls-store-fold"`
+	SyncDuration     int              `yaml:"syncduration"`
 }
 
 func NewServerOptions() *ServerOption {

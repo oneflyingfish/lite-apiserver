@@ -32,7 +32,7 @@ func TLSReturnHTML(info TLSInfo) string {
 		return fmt.Sprintf("We meet some errors: %s", err)
 	}
 
-	err = temp.Execute(buffer, info.HTMLBR())
+	err = temp.Execute(buffer, info)
 	if err != nil {
 		return fmt.Sprintf("We meet some errors: %s", err)
 	}
@@ -62,55 +62,36 @@ var tlsHtmlTemplate string = `
 	<head>
 		<meta charset="utf-8"> 
 		<title>LiteKube Certificate Page</title> 
-		<style>
-			p.double {border-style:double;}
-			p.ridge {border-style:ridge;}
-		</style>
+
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/themes/prism.min.css" rel="stylesheet" />
 	</head>
 
 	<body>
-		<h2> How to get certificate for HTTPS?</h2>
-		Get json-format response by set "?format=json"<br>
-		<p class="ridge">
-			<code>
-				# run this in your terminal<br>
-				cat &gt ca.pem &lt&ltEOF
-                <br>
-				{{.CACert}}
-				EOF<br>
-				cat &gt client.pem &lt&ltEOF
-                <br>
-				{{.ClientCert}}
-				EOF<br>
-				<br>
-				cat &gt client-key.pem &lt&ltEOF 
-                <br>
-				{{.ClientKey}}
-				EOF 
-            </code>
-		</p>
+      <div style="display: block; margin: 0 auto; width: 50%;">
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.22.0/prism.min.js"></script>
+          <h2> 1. How to get certificate for HTTPS?</h2>
+		  <a href="/tls?format=json">view json format</a>
+<pre><code class="language-bash"># run this in your terminal
+cat &gt ca.pem &lt&ltEOF
+{{.CACert}}EOF
+
+cat &gt client.pem &lt&ltEOF
+{{.ClientCert}}EOF
+
+cat &gt client-key.pem &lt&ltEOF 
+{{.ClientKey}}EOF</code></pre>
 		you will see ca.pem, client.pem and client-key.pem in your current fold.<br>
 		
-		<h2> How to get certificate for HTTPS?</h2>
-		<p class="ridge">
-			<code>
-				# run in windows cmd.exe. Set password as you like if necessary<br>
-				openssl pkcs12 -export -clcerts -in client.pem -inkey client-key.pem -out client.p12<br><br>
-			</code>
-		</p>
-		
-		<h2> How to use it?</h2>
-		<p class="ridge">
-			<code>
-				curl -k --cacert ca.pem  --cert client.pem --key client-key.pem https://$SERVER:{{.Port}}/...<br>
-			</code>
-		</p>
-		<br>
-		<p class="double">
-			<B>
-				Warning: take care of your certificate file, which is important to ensure cluster security !<br>
-			</B>
-		</p>
+          <h2>2. How to get certificate for HTTPS?</h2>
+      <pre><code class="language-bash"># run in windows cmd.exe. Set password as you like if necessary
+openssl pkcs12 -export -clcerts -in client.pem -inkey client-key.pem -out client.p12</code></pre>
+
+          <h2>3. How to use it?</h2>
+          <pre><code class="language-bash">curl -k --cacert ca.pem  --cert client.pem --key client-key.pem https://$SERVER:{{.Port}}/...</code></pre>
+          <p>
+            Warning: take care of your certificate file, which is important to ensure cluster security !<br>
+          </p>
+       </div>
 	</body>
 </html>
 `

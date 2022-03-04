@@ -2,6 +2,7 @@ package tls
 
 import (
 	"LiteKube/pkg/lite-apiserver/cert"
+	"LiteKube/pkg/lite-apiserver/describe"
 	"fmt"
 	"net/http"
 
@@ -10,34 +11,49 @@ import (
 	"github.com/emicklei/go-restful"
 )
 
-func RegisterWebService(container *restful.Container, caKeyPair *cert.TLSKeyPair, port int, checkPrivilege bool) {
-	ws := new(restful.WebService)
-	ws.Path("/tls")
+// func RegisterWebService(container *restful.Container, caKeyPair *cert.TLSKeyPair, port int, checkPrivilege bool) {
+// 	ws := new(restful.WebService)
+// 	ws.Path("/tls")
 
-	ws.Route(ws.GET("").To(TLSResponse(caKeyPair, port, checkPrivilege)))
-	container.Add(ws)
-}
+// 	ws.Route(ws.GET("").To())
+// 	container.Add(ws)
+// }
 
 func TLSResponse(caTLSKeyPair *cert.TLSKeyPair, port int, checkPrivilege bool) restful.RouteFunction {
 	return func(request *restful.Request, response *restful.Response) {
 		klog.Info("one request for https certificate")
 
 		if (caTLSKeyPair == nil || request.Request.TLS == nil) && checkPrivilege {
-			response.AddHeader("Content-Type", "text/plain")
-			response.WriteErrorString(http.StatusInternalServerError, "this work is not allowed by HTTP, you can access by https, which means you may need to seek admin for privilege.")
+			status := describe.StatusInfo{
+				Reason:  "Forbidden",
+				Message: `/tls is not allowed to access by HTTP, you can access by HTTPS, which means you may need to seek admin for privilege.`,
+				Code:    403,
+			}.Complete()
+			response.WriteHeaderAndJson(http.StatusForbidden, status, "application/json")
+			klog.Info("certificate request forbidden")
 			return
 		} else {
 			caCert, caKey, ok := caTLSKeyPair.GetTLSKeyPairCertificate()
 			if !ok {
-				response.AddHeader("Content-Type", "text/plain")
-				response.WriteErrorString(http.StatusInternalServerError, "fail to load CA informations")
+				status := describe.StatusInfo{
+					Reason:  "Internal Server Error",
+					Message: `fail to load CA informations`,
+					Code:    http.StatusInternalServerError,
+				}.Complete()
+				response.WriteHeaderAndJson(http.StatusInternalServerError, status, "application/json")
+				klog.Info("certificate request error")
 				return
 			}
 
 			clientCertBase64, clientKeyBase64, err := cert.CreateClientCertBase64(caCert, caKey)
 			if err != nil {
-				response.AddHeader("Content-Type", "text/plain")
-				response.WriteErrorString(http.StatusInternalServerError, fmt.Sprintf("error occured while generate certificate for client, tips: %s", err))
+				status := describe.StatusInfo{
+					Reason:  "Internal Server Error",
+					Message: fmt.Sprintf("error occured while generate certificate for client, tips: %s", err),
+					Code:    http.StatusInternalServerError,
+				}.Complete()
+				response.WriteHeaderAndJson(http.StatusInternalServerError, status, "application/json")
+				klog.Info("certificate request error")
 				return
 			}
 

@@ -2,10 +2,11 @@ package runtimes
 
 import (
 	"LiteKube/pkg/common"
+	"LiteKube/pkg/lite-apiserver/describe"
 	options "LiteKube/pkg/lite-apiserver/options/serverOptions"
-	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers"
+	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/api"
 	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/debug"
-	tlsHandle "LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/tls"
+	"LiteKube/pkg/lite-apiserver/server/runtimes/ServerHandlers/global"
 	"LiteKube/pkg/util"
 	"context"
 	"crypto/tls"
@@ -205,38 +206,36 @@ func (s *ServerRuntime) RunHttpsServer() error {
 }
 
 func (s *ServerRuntime) InitHandlers() error {
-	//s.serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintf(w, "Welcome, here is LiteKube!\n") })
-	// s.serverMux.HandleFunc("/tls", sendClientTLS(s.CATLSKeyPair, s.Port))
-	// s.serverMux.Handle("/debug/", debug.NewDebugHandle(s.CATLSKeyPair, s.Port))
+	s.serverContainer.ServiceErrorHandler(errorResponse)
 
-	// add RestFul for debug
+	// add "/debug/..."
 	if s.ServerOption.Debug {
 		klog.Warning(">>>>> Notice, you're running in debug mode, it may not be safe! <<<<<")
 		debugHandle := debug.NewDebugHandle(s.CATLSKeyPair, s.Port)
 		debugHandle.RegisterWebService(s.serverContainer)
 	}
 
-	// add RestFul for TLS-access
-	tlsHandle.RegisterWebService(s.serverContainer, s.CATLSKeyPair, s.Port, true)
+	// add "/..."
+	global.RegisterWebService(s.serverContainer, s.CATLSKeyPair, s.Port)
 
-	// add RestFul for API
-	ServerHandlers.GlobalRegisterWebService(s.serverContainer)
+	// add "/api/..."
+	api.NewAPI(s.ServerOption.Hostname, s.ServerOption.Port).RegisteredWebServices(s.serverContainer)
 
 	return nil
+}
+
+func errorResponse(err restful.ServiceError, request *restful.Request, response *restful.Response) {
+	if err.Code == http.StatusNotFound || err.Code == http.StatusNotAcceptable {
+		response.WriteHeaderAndJson(err.Code, describe.StatusInfo{
+			Message: "the server could not find the requested resource",
+			Reason:  "NotFound",
+			Code:    err.Code,
+		}.Complete(), "application/json")
+	} else {
+		response.WriteHeaderAndJson(err.Code, err.Message, "application/json")
+	}
 }
 
 func (s *ServerRuntime) WaitUtilExit() {
 	s.wg.Wait()
 }
-
-// func sendClientTLS(caTLSKeyPair *cert.TLSKeyPair, port int) func(w http.ResponseWriter, r *http.Request) {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		statusCode, err := handleTLS.TLSHandleFunc(caTLSKeyPair, port, true)(w, r)
-// 		if statusCode != http.StatusOK {
-// 			w.WriteHeader(statusCode)
-// 		}
-// 		if err != nil {
-// 			fmt.Fprint(w, common.ErrorString(err.Error(), r.URL.Query().Get("format") != "json"))
-// 		}
-// 	}
-// }

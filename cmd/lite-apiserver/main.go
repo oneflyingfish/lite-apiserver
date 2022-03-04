@@ -3,6 +3,7 @@ package main
 import (
 	"LiteKube/cmd/lite-apiserver/app"
 	"flag"
+	"fmt"
 	"math/rand"
 	"os"
 	"time"
@@ -18,6 +19,16 @@ func main() {
 	// Init for global klog
 	klog.InitFlags(nil)
 	defer klog.Flush()
+	klog.MaxSize = 10240
+
+	if err := os.MkdirAll("litekube-logs/lite-apiserver", os.ModePerm); err != nil {
+		panic(err)
+	}
+
+	flag.Set("logtostderr", "false")
+	year, month, day := time.Now().Date()
+	flag.Set("log_file", fmt.Sprintf("litekube-logs/lite-apiserver/log-%d-%d-%d_%d-%d.log", year, month, day, time.Now().Hour(), time.Now().Minute()))
+	flag.Set("alsologtostderr", "true")
 
 	// Init Cobra command
 	cmd := app.NewServerCommand()
