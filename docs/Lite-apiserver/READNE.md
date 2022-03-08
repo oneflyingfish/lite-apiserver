@@ -200,10 +200,10 @@
 * Surely, you can use this two way tother, and flags will be in a higher priority.
 
 ```bash
-$ ./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=server.yaml
+$ ./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=./test/server.yaml
 ```
 
 * disable log file and enable debug
 ```shell
-./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=server.yaml --debug=true --logtostderr=true
+./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=./test/server.yaml --debug=true --logtostderr=true
 ```

@@ -225,6 +225,26 @@ func (s *ServerRuntime) InitHandlers() error {
 }
 
 func errorResponse(err restful.ServiceError, request *restful.Request, response *restful.Response) {
+	if request.Request.Method == "GET" {
+		// debug kubelet normal
+		fmt.Printf(">>>[%s]one request to %s:\n", request.Request.Method, request.Request.URL)
+		fmt.Println(">Header:")
+		for key, value := range request.Request.Header {
+			fmt.Printf("%s: %s\n", key, value)
+		}
+
+		fmt.Println(">Body:")
+		data, err_ := ioutil.ReadAll(request.Request.Body)
+		if err_ != nil {
+			fmt.Printf("error: %s\n", err.Error())
+		}
+		fmt.Printf("%s\n\n", string(data))
+
+	} else {
+		fmt.Printf(">>>[%s]one request to %s:\n\n", request.Request.Method, request.Request.URL)
+	}
+	// end debug
+
 	if err.Code == http.StatusNotFound || err.Code == http.StatusNotAcceptable {
 		response.WriteHeaderAndJson(err.Code, describe.StatusInfo{
 			Message: "the server could not find the requested resource",

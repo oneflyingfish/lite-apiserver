@@ -39,8 +39,8 @@ func (ns *Namespaces) AddGetRoutes() {
 }
 
 func (ns *Namespaces) GetRoute(request *restful.Request, response *restful.Response) {
-	namespace := request.PathParameter("namespace")
-	podName := request.PathParameter("name")
+	//namespace := request.PathParameter("namespace")
+	//podName := request.PathParameter("name")
 
 	// Get Rotures
 }

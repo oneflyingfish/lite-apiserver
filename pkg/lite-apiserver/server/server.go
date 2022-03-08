@@ -3,7 +3,6 @@ package server
 import (
 	"LiteKube/pkg/lite-apiserver/options/serverRunOptions"
 	"LiteKube/pkg/lite-apiserver/server/runtimes"
-	kubeletapis "LiteKube/pkg/lite-apiserver/server/runtimes/KTRI/apis"
 	"context"
 	"sync"
 
@@ -33,12 +32,12 @@ func (s *LiteServer) Run() error {
 	defer s.wg.Done()
 	s.wg.Add(1)
 
-	// init default kubelet client
-	kr, err := kubeletapis.CreateKubeletRuntime(s.kubeletOptions, s.ctx)
-	if err != nil {
-		return err
-	}
-	kubeletapis.InitKubelet(kr)
+	// // init default kubelet client
+	// kr, err := kubeletapis.CreateKubeletRuntime(s.kubeletOptions, s.ctx)
+	// if err != nil {
+	// 	return err
+	// }
+	// kubeletapis.InitKubelet(kr)
 
 	// run lite apiserver to listen with HTTP(S)
 	if err := s.serverRuntime.RunServer(); err != nil {
