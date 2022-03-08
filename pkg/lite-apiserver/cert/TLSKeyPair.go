@@ -45,14 +45,14 @@ func (opt *TLSKeyPair) GetTLSKeyPairCertificate() (*x509.Certificate, *rsa.Priva
 	if !opt.Valid {
 		return nil, nil, false
 	}
-	caCert := certificate.ReadCertificateFromFile(opt.certPath)
-	caKey := certificate.ReadPrivateKeyFromFile(opt.keyPath)
+	cert := certificate.ReadCertificateFromFile(opt.certPath)
+	key := certificate.ReadPrivateKeyFromFile(opt.keyPath)
 
-	if caCert == nil || caKey == nil {
+	if cert == nil || key == nil {
 		return nil, nil, false
 	}
 
-	return caCert, caKey, true
+	return cert, key, true
 }
 
 func (opt *TLSKeyPair) GetCertBase64() []byte {

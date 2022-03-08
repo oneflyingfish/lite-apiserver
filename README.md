@@ -261,3 +261,11 @@ kubeletctl pods -s 127.0.0.1 $CERT
 
 ## How to use LiteKube
 [run lite-apiserver](docs/READNE.md)
+
+## fix port already in use
+```shell
+ps -ef | grep kubelet
+sudo kill -9 $PID
+
+sudo netstat -an -p | grep $PID # view port used by this process
+```
