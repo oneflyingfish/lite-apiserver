@@ -114,34 +114,74 @@
     '''
     The lite-apiserver is one simplified version of kube-apiserver, which is only service for one node and deal with pods.
 
-    Usage:
-        lite-apiserver [flags]
+Usage:
+  lite-apiserver [flags]
 
-    Lite-apiserver flags:
+Lite-apiserver flags:
 
-        --ca-tls-configpath string                                                                                                                                                                                                                           
-                    path to config store the X.509 Certificate information for lite-apiserver (default: "")
-        --config string                                                                                                                                                                                                                                      
-                    config for lite-apiserver (lower priority to flags)
-        --hostname string                                                                                                                                                                                                                                    
-                    hostname of lite-apiserver (default: 127.0.0.1)
-        --insecure-port int                                                                                                                                                                                                                                  
-                    http port of lite-apiserver, not secure, set 0 to disable (default: 0)
-        --port int                                                                                                                                                                                                                                           
-                    https port of lite-apiserver (default: 6500)
+      --config string                                                                                                                                                                                                                                                        
+                config for lite-apiserver (lower priority to flags)
+      --debug                                                                                                                                                                                                                                                                
+                enable debug or not, this value is not allow to set with config-file (default: false)
+      --hostname string                                                                                                                                                                                                                                                      
+                hostname of lite-apiserver (default: 127.0.0.1)
+      --insecure-port int                                                                                                                                                                                                                                                    
+                http port of lite-apiserver, not secure, set -1 to disable (default: -1)
+      --port int                                                                                                                                                                                                                                                             
+                https port of lite-apiserver (default: 13500)
+      --syncduration int                                                                                                                                                                                                                                                     
+                max time for one-request last (default: 10)
+      --tls-store-fold string                                                                                                                                                                                                                                                
+                fold path to store CA and server X.509 files for lite-apiserver, which contains {ca, server}.{pem, -key.pem} (default: "")
 
     Kubelet flags:
 
-        --kubelet-client-cert-config string                                                                                                                                                                                                                  
-                    path to config store the X.509 Certificate information to kubelet (default: "")
-        --kubelet-config string                                                                                                                                                                                                                              
-                    config for kubelet (lower priority to flags)
-        --kubelet-healthzport int                                                                                                                                                                                                                            
-                    healthz port of kubelet (default: 10248)
-        --kubelet-hostname string                                                                                                                                                                                                                            
-                    hostname of kubelet (default: 127.0.0.1)
-        --kubelet-port int                                                                                                                                                                                                                                   
-                    port of kubelet (default: 10250)
+      --kubelet-client-cert-config string                                                                                                                                                                                                                                    
+                path to config store the X.509 Certificate information to kubelet (default: "")
+      --kubelet-config string                                                                                                                                                                                                                                                
+                config for kubelet (lower priority to flags)
+      --kubelet-healthzport int                                                                                                                                                                                                                                              
+                healthz port of kubelet (default: 10248)
+      --kubelet-hostname string                                                                                                                                                                                                                                              
+                hostname of kubelet (default: 127.0.0.1)
+      --kubelet-pod-manifest-path string                                                                                                                                                                                                                                     
+                same value with kubelet --pod-manifest-path， set "" will disable lite-apiserver with alpha version (default: "")
+      --kubelet-port int                                                                                                                                                                                                                                           
+                port of kubelet (default: 10250)
+
+    Others flags:
+
+      --version version[=simple]                                                                                                              
+                Print version information and quit, true/false/raw/simple (default: simple)
+
+    Logging (unable to set with config) flags:
+
+      --add_dir_header                                                                                                                                                                                                                                                       
+                If true, adds the file directory to the header of the log messages
+      --alsologtostderr                                                                                                                                                                                                                                                      
+                log to standard error as well as files (default true)
+      --log_backtrace_at traceLocation                                                                                                                                                                                                                                       
+                when logging hits line file:N, emit a stack trace (default :0)
+      --log_dir string                                                                                                                                                                                                                                                       
+                If non-empty, write log files in this directory
+      --log_file string                                                                                                                                                                                                                                                      
+                If non-empty, use this log file (default "litekube-logs/lite-apiserver/log-2022-3-8_2-56.log")
+      --log_file_max_size uint                                                                                                                                                                                                                                               
+                Defines the maximum size a log file can grow to. Unit is megabytes. If the value is 0, the maximum file size is unlimited. (default 1800)
+      --logtostderr                                                                                                                                                                                                                                                          
+                log to standard error instead of files
+      --one_output                                                                                                                                                                                                                                                           
+                If true, only write logs to their native severity level (vs also writing to each lower severity level)
+      --skip_headers                                                                                                                                                                                                                                                         
+                If true, avoid header prefixes in the log messages
+      --skip_log_headers                                                                                                                                                                                                                                                     
+                If true, avoid headers when opening log files
+      --stderrthreshold severity                                                                                                                                                                                                                                             
+                logs at or above this threshold go to stderr (default 2)
+        -v, --v Level                                                                                                             
+                number for the log level verbosity
+      --vmodule moduleSpec                                                                                                                                                                                                                                                   
+                comma-separated list of pattern=N settings for file-filtered logging
     '''
 
     # for example:
@@ -158,6 +198,11 @@
 
 * Surely, you can use this two way tother, and flags will be in a higher priority.
 
-    ```bash
-    $ ./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=server.yaml
-    ```
+```bash
+$ ./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=server.yaml
+```
+
+* disable log file and enable debug
+```shell
+./lite-apiserver --hostname=localhost --kubelet-config=./test/kubelet.yaml --config=server.yaml --debug=true --logtostderr=true
+```
