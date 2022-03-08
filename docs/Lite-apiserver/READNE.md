@@ -114,10 +114,10 @@
     '''
     The lite-apiserver is one simplified version of kube-apiserver, which is only service for one node and deal with pods.
 
-Usage:
-  lite-apiserver [flags]
+    Usage:
+    lite-apiserver [flags]
 
-Lite-apiserver flags:
+    Lite-apiserver flags:
 
       --config string                                                                                                                                                                                                                                                        
                 config for lite-apiserver (lower priority to flags)
@@ -182,6 +182,7 @@ Lite-apiserver flags:
                 number for the log level verbosity
       --vmodule moduleSpec                                                                                                                                                                                                                                                   
                 comma-separated list of pattern=N settings for file-filtered logging
+
     '''
 
     # for example:
