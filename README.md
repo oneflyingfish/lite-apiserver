@@ -269,3 +269,5 @@ sudo kill -9 $PID
 
 sudo netstat -an -p | grep $PID # view port used by this process
 ```
+
+curl -k $CERT https://127.0.0.1:10250/exec/default/{podID}/{containerName}?command={command}/&input=1&output=1&tty=1"

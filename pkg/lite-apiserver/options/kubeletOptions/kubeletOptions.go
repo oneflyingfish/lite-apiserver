@@ -26,7 +26,7 @@ var (
 )
 
 type KubeletOption struct {
-	TLSKeyPair    *cert.TLSKeyPair `json:"-"`
+	TLSKeyPair    *cert.TLSKeyPair `yaml:"-"`
 	Hostname      string           `yaml:"kubelet-hostname"`
 	HealthzPort   int              `yaml:"kubelet-healthzport"`
 	Port          int              `yaml:"kubelet-port"`

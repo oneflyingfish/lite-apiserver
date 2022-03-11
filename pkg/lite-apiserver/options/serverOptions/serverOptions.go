@@ -29,9 +29,9 @@ var (
 )
 
 type ServerOption struct {
-	CATLSKeyPair     *cert.TLSKeyPair `json:"-"`
-	ServerTLSKeyPair *cert.TLSKeyPair `json:"-"`
-	Debug            bool             `json:"-"`
+	CATLSKeyPair     *cert.TLSKeyPair `yaml:"-"`
+	ServerTLSKeyPair *cert.TLSKeyPair `yaml:"-"`
+	Debug            bool             `yaml:"-"`
 	Hostname         string           `yaml:"hostname"`
 	Port             int              `yaml:"port"`
 	InsecurePort     int              `yaml:"insecure-port"`
